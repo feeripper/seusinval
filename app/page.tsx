@@ -1,40 +1,209 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
-import {LayoutDashboard,ShieldCheck,LockKeyhole,BrainCircuit,Bell,ChevronRight,ArrowUpRight,ArrowDownRight,Sparkles,Send,ArrowRight,Database,CalendarDays,Activity,MessageSquare,Info,LoaderCircle} from 'lucide-react';
-import {SidebarProvider,Sidebar,SidebarHeader,SidebarContent,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarTrigger} from '@/components/ui/sidebar';
-import {Tabs,TabsList,TabsTrigger,TabsContent} from '@/components/ui/tabs';
-import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
-import {Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@/components/ui/table';
-import {Select,SelectTrigger,SelectContent,SelectItem,SelectValue} from '@/components/ui/select';
-import {ResponsiveContainer,AreaChart,Area,LineChart,Line,XAxis,YAxis,CartesianGrid,Tooltip,ReferenceLine} from 'recharts';
-import {indicators as demo,Indicator,status,fmt,projection,months} from '@/lib/indicators';
-const nav=[{label:'Visão geral',icon:LayoutDashboard},{label:'Privacidade de dados',icon:ShieldCheck},{label:'Proteção de dados',icon:LockKeyhole},{label:'Riscos de IA',icon:BrainCircuit},{label:'Central de alertas',icon:Bell}];
-const colors=['#ec7000','#1754a1','#7a56a6'];
-function Badge({value}:{value:string}){return <span className={'badge '+(value==='Crítico'?'critical':value==='Atenção'?'warning':'healthy')}>{value}</span>}
-export default function Page(){
- const [view,setView]=useState('Visão geral'),[rows,setRows]=useState<Indicator[]>(demo),[mode,setMode]=useState('demo'),[error,setError]=useState(''),[filter,setFilter]=useState('Todos'),[selected,setSelected]=useState<Indicator|null>(null),[chat,setChat]=useState(false),[input,setInput]=useState(''),[busy,setBusy]=useState(false),[messages,setMessages]=useState<{role:string,text:string}[]>([]),[tab,setTab]=useState('atual');
- const end=useRef<HTMLDivElement>(null);
- useEffect(()=>{fetch('/api/indicators').then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{setRows(d.indicators);setMode(d.mode)}).catch(()=>setError('Não foi possível atualizar a base. Exibindo os dados demonstrativos locais.'))},[]);
- useEffect(()=>{end.current?.scrollIntoView({behavior:'smooth'})},[messages,busy]);
- const category=nav.some(n=>n.label===view)&&!['Visão geral','Central de alertas'].includes(view);
- const scope=category?rows.filter(i=>i.domain===view):rows;
- const visible=scope.filter(i=>(view!=='Central de alertas'||status(i)!=='Na meta')&&(filter==='Todos'||status(i)===filter));
- const critical=scope.filter(i=>status(i)==='Crítico');const attention=scope.filter(i=>status(i)==='Atenção');const healthy=scope.filter(i=>status(i)==='Na meta');
- const plot=[...months,'Set*'].map((month,j)=>{const point:Record<string,string|number|null>={month};nav.slice(1,4).forEach((n,k)=>{const group=rows.filter(i=>i.domain===n.label&&i.unit==='%');const avg=(idx:number)=>group.reduce((s,i)=>s+i.history[idx],0)/group.length;point['v'+k]=j<6?Math.round(avg(j)*10)/10:null;point['p'+k]=j===5?Math.round(avg(5)*10)/10:j===6?Math.round(group.reduce((s,i)=>s+projection(i),0)/group.length*10)/10:null});return point});
- async function ask(q:string){if(!q.trim()||busy)return;setChat(true);setInput('');setMessages(m=>[...m,{role:'user',text:q}]);setBusy(true);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,domain:category?view:'Todos'})});if(!r.ok)throw Error('Não foi possível concluir a análise. Tente novamente.');const d=await r.json();setMessages(m=>[...m,{role:'assistant',text:d.answer}])}catch(e){setMessages(m=>[...m,{role:'assistant',text:e instanceof Error?e.message:'Serviço indisponível.'}])}finally{setBusy(false)}}
- function navigate(label:string){setView(label);setFilter('Todos')}
- return <SidebarProvider style={{'--sidebar-width':'238px'} as React.CSSProperties}>
- <Sidebar className="side"><SidebarHeader className="brand"><div className="itau">itaú</div><div className="brand-name">governança<span>dados & inteligência artificial</span></div></SidebarHeader><SidebarContent><div className="nav-caption">WORKSPACE</div><SidebarMenu className="nav-menu">{nav.map((n,index)=><SidebarMenuItem key={n.label}><SidebarMenuButton className={'nav-item '+(view===n.label?'nav-active':'')} onClick={()=>navigate(n.label)} isActive={view===n.label}><n.icon size={19}/><span>{n.label}</span>{index===4&&<b className="nav-count">{rows.filter(i=>status(i)!=='Na meta').length}</b>}</SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu><div className="nav-divider"/><div className="nav-caption">INTELIGÊNCIA</div><button className="sinval-nav" onClick={()=>setChat(true)}><Sparkles size={19}/>Seu Sinval<span>IA</span></button><div className="side-note"><ShieldCheck size={21}/><p>Uma visão integrada.<br/><strong>Decisões mais seguras.</strong></p></div></SidebarContent><SidebarFooter className="side-footer"><div className="avatar">FA</div><div>Felippe Araujo<span>Visão de demonstração</span></div></SidebarFooter></Sidebar>
- <main className="workspace"><header className="topbar"><div className="breadcrumb"><SidebarTrigger/><span>Governança</span><ChevronRight size={14}/><strong>{view}</strong></div><div className="header-right"><span className="demo-tag">{mode==='demo'?'Ambiente demonstrativo':'Base conectada'}</span><button aria-label="Ver alertas" className="icon-btn" onClick={()=>navigate('Central de alertas')}><Bell size={19}/></button><div className="avatar small">FA</div></div></header>
- <div className="page-content"><div className="title-row"><div><div className="eyebrow">PRIVACIDADE, PROTEÇÃO E RISCOS DE IA</div><h1>{view}</h1><p className="subtitle">Transforme indicadores em decisões. Antecipe o que precisa de atenção.</p></div><div className="period"><CalendarDays size={17}/><span>Agosto de 2026</span></div></div>
- {error&&<div className="notice" role="alert">{error}</div>}
- <div className="context-line"><span><Database size={14}/> {mode==='demo'?'Dados fictícios para exploração':'Dados fornecidos pelo backend'}</span><span>Referência: 31 ago 2026 · fechamento mensal</span></div>
- <div className="kpi-grid"><article className="kpi"><div className="kpi-label">Indicadores monitorados<LayoutDashboard size={18}/></div><div className="kpi-number">{scope.length}<span>indicadores</span></div><div className="kpi-foot">{category?'Domínio selecionado':'3 domínios de governança'}</div></article><article className="kpi"><div className="kpi-label">Dentro da meta<ShieldCheck size={18}/></div><div className="kpi-number">{healthy.length}<span className="green">{fmt(healthy.length/scope.length*100)}%</span></div><div className="kpi-foot"><span className="green">Controles em patamar esperado</span></div></article><article className="kpi"><div className="kpi-label">Em atenção<Activity size={18}/></div><div className="kpi-number">{attention.length}<span className="amber">acompanhar</span></div><div className="kpi-foot">Próximos da meta estabelecida</div></article><article className="kpi critical-kpi"><div className="kpi-label">Indicadores críticos<Bell size={18}/></div><div className="kpi-number">{critical.length}<span className="red">ação necessária</span></div><button className="text-button" onClick={()=>{navigate('Central de alertas');setFilter('Crítico')}}>Ver prioridades <ArrowRight size={14}/></button></article></div>
- <div className="middle-grid"><section className="panel trend-panel"><div className="panel-heading"><div><h2>Evolução dos indicadores</h2><p>Média dos indicadores percentuais por domínio</p></div><span className="tiny-label">MAR — SET 2026</span></div><Tabs value={tab} onValueChange={setTab}><TabsList className="chart-tabs"><TabsTrigger value="atual">Visão atual</TabsTrigger><TabsTrigger value="futuro"><Sparkles size={14}/>Visão futura</TabsTrigger></TabsList><TabsContent value={tab}><div className="chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={tab==='futuro'?plot:plot.slice(0,6)} margin={{top:14,right:18,left:-23,bottom:4}}><CartesianGrid vertical={false} stroke="#e9ecf0" strokeDasharray="3 4"/><XAxis dataKey="month" tickLine={false} axisLine={false} tick={{fontSize:12,fill:'#737982'}} dy={8}/><YAxis domain={[50,100]} ticks={[50,65,80,95,100]} tickFormatter={v=>v+'%'} tickLine={false} axisLine={false} tick={{fontSize:12,fill:'#737982'}}/><Tooltip formatter={(v)=>[`${v}%`]} contentStyle={{borderRadius:10,border:'1px solid #e6e8ec',fontSize:14}}/>{nav.slice(1,4).map((n,k)=><Line key={n.label} type="monotone" dataKey={'v'+k} name={n.label} stroke={colors[k]} strokeWidth={2.6} dot={{r:3,fill:'white',strokeWidth:2}} activeDot={{r:5}}/>)}{tab==='futuro'&&nav.slice(1,4).map((n,k)=><Line key={n.label} type="monotone" dataKey={'p'+k} name={n.label+' · projeção'} stroke={colors[k]} strokeWidth={2.6} strokeDasharray="5 5" dot={{r:3}}/>)}</LineChart></ResponsiveContainer></div></TabsContent></Tabs><div className="legend">{nav.slice(1,4).map((n,k)=><span key={n.label}><i style={{background:colors[k]}}/>{n.label}</span>)}</div>{tab==='futuro'&&<p className="forecast-note">* Setembro: extrapolação da variação média jun–ago. Cenário ilustrativo, sem validação preditiva.</p>}</section>
- <section className="sinval-card"><div className="sinval-top"><span className="sinval-symbol"><Sparkles size={24}/></span><span className="ai-label">SEU ASSISTENTE DE IA</span></div><h2>Seu Sinval</h2><p>Os números contam uma história.<br/>Vamos entender juntos?</p><div className="sinval-insight"><span><Activity size={16}/>O que merece seu olhar</span><p><strong>{critical.length} indicadores críticos</strong> neste recorte. {critical[0]?`${critical[0].name} pede atenção prioritária.`:'Os indicadores estão próximos ou dentro das metas.'}</p></div><button className="sinval-cta" onClick={()=>ask('Analise os indicadores críticos e indique as prioridades')}>Analisar com Seu Sinval<ArrowUpRight size={18}/></button><div className="sinval-mode">{mode==='demo'?'Prévia com análise por regras · dados fictícios':'Respostas fundamentadas nos indicadores'}</div></section></div>
- <section className="panel indicator-panel"><div className="panel-heading"><div><h2>{view==='Central de alertas'?'Alertas que precisam de ação':'Panorama dos indicadores'} <span className="count">{visible.length}</span></h2><p>{view==='Central de alertas'?'Desvios da meta e responsáveis pela atuação.':'Acompanhe resultados, metas e tendências em um só lugar.'}</p></div><Select value={filter} onValueChange={setFilter}><SelectTrigger aria-label="Filtrar por situação" className="status-select"><SelectValue/></SelectTrigger><SelectContent>{['Todos','Na meta','Atenção','Crítico'].map(s=><SelectItem value={s} key={s}>{s==='Todos'?'Todas as situações':s}</SelectItem>)}</SelectContent></Select></div><Table><TableHeader><TableRow><TableHead>Indicador</TableHead><TableHead>Resultado</TableHead><TableHead>Meta</TableHead><TableHead>Últimos 6 meses</TableHead><TableHead>Situação</TableHead><TableHead><span className="sr-only">Detalhes</span></TableHead></TableRow></TableHeader><TableBody>{visible.map(i=><TableRow key={i.id}><TableCell><button className="indicator-title" onClick={()=>setSelected(i)}>{i.name}</button><span className="indicator-sub">{i.id} <span>·</span> {i.domain}</span></TableCell><TableCell><strong className="result">{fmt(i.value)}{i.unit}</strong><span className={'delta '+((i.value-i.previous)*(i.direction==='up'?1:-1)>=0?'green':'red')}>{i.value>=i.previous?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {fmt(Math.abs(i.value-i.previous))}{i.unit==='%'?' p.p.':''}</span></TableCell><TableCell className="target">{i.direction==='up'?'≥':'≤'} {fmt(i.target)}{i.unit}</TableCell><TableCell><div className="sparkline" aria-label={'Histórico: '+i.history.join(', ')}><ResponsiveContainer width="100%" height="100%"><AreaChart data={i.history.map(v=>({v}))}><Area dataKey="v" type="monotone" stroke={status(i)==='Crítico'?'#c44b45':'#2b8b6b'} fill={status(i)==='Crítico'?'#fff0ef':'#e9f5ef'} strokeWidth={1.8}/></AreaChart></ResponsiveContainer></div></TableCell><TableCell><Badge value={status(i)}/></TableCell><TableCell><button className="icon-btn" aria-label={'Ver detalhes de '+i.name} onClick={()=>setSelected(i)}><ChevronRight size={18}/></button></TableCell></TableRow>)}</TableBody></Table>{!visible.length&&<div className="empty"><ShieldCheck/><h3>Nenhum indicador nesta situação</h3><p>Escolha outra situação para ampliar a visualização.</p><button onClick={()=>setFilter('Todos')}>Limpar filtro</button></div>}</section><footer className="page-footer"><span>itaú unibanco <b>·</b> Governança de dados e IA</span><span><Info size={13}/> Protótipo conceitual · metas e dados demonstrativos</span></footer></div>
- </main>
- <Sheet open={!!selected} onOpenChange={o=>!o&&setSelected(null)}><SheetContent className="detail-sheet"><SheetHeader><SheetDescription>{selected?.id} · {selected?.domain}</SheetDescription><SheetTitle>{selected?.name}</SheetTitle></SheetHeader>{selected&&<div className="detail-body"><Badge value={status(selected)}/><div className="detail-value">{fmt(selected.value)}{selected.unit}<small>Meta {selected.direction==='up'?'≥':'≤'} {fmt(selected.target)}{selected.unit}</small></div><h3>Como o indicador é calculado</h3><p>{selected.unit==='%'?`${selected.numerator} de ${selected.denominator} registros × 100 = ${fmt(selected.value)}%.`:`Contagem de ${selected.value} incidentes no período.`}</p><dl><dt>Responsável</dt><dd>{selected.owner}</dd><dt>Fonte</dt><dd>{selected.source}</dd><dt>Período</dt><dd>Agosto de 2026 · dados demonstrativos</dd></dl><h3>Ação recomendada</h3><p>{selected.action}</p><h3>Visão futura · setembro</h3><p>Projeção ilustrativa: <strong>{fmt(projection(selected))}{selected.unit}</strong>. Extrapolação da variação média jun–ago, limitada a 0–100% nos percentuais.</p><div className="detail-rule">Critério demonstrativo: meta atingida = na meta; desvio de até 10 p.p. = atenção; acima de 10 p.p. = crítico. Qualquer incidente é crítico.</div><button className="primary-button" onClick={()=>{ask('Analise o indicador '+selected.id+' e sua tendência futura');setSelected(null)}}><Sparkles size={17}/>Perguntar ao Seu Sinval</button></div>}</SheetContent></Sheet>
- <Sheet open={chat} onOpenChange={setChat}><SheetContent className="chat-sheet"><SheetHeader className="chat-header"><div className="chat-brand"><span className="sinval-symbol"><Sparkles size={23}/></span><div><SheetTitle>Seu Sinval</SheetTitle><SheetDescription>Seu assistente de indicadores</SheetDescription></div></div></SheetHeader><div className="chat-context">{category?view:'Todos os domínios'} · Agosto de 2026</div><div className="chat-messages" aria-live="polite">{!messages.length&&<div className="chat-welcome"><Sparkles size={34}/><h2>Olá, sou o Seu Sinval.</h2><p>Vamos olhar além dos números? Posso ajudar a entender desvios, tendências e prioridades.</p>{['Quais indicadores precisam de atenção?','Qual a tendência para o próximo mês?','Resuma os riscos de IA'].map(q=><button key={q} onClick={()=>ask(q)}>{q}<ArrowUpRight size={16}/></button>)}</div>}{messages.map((m,i)=><div className={'message '+m.role} key={i}><span>{m.role==='user'?'Você':'Seu Sinval'}</span><p>{m.text}</p></div>)}{busy&&<div className="thinking"><LoaderCircle className="animate-spin" size={18}/>Analisando os indicadores…</div>}<div ref={end}/></div><form className="chat-form" onSubmit={e=>{e.preventDefault();ask(input)}}><label className="sr-only" htmlFor="question">Sua pergunta ao Seu Sinval</label><div><input id="question" maxLength={2000} value={input} onChange={e=>setInput(e.target.value)} placeholder="O que você quer analisar?"/><button disabled={busy||!input.trim()} aria-label="Enviar pergunta"><Send size={19}/></button></div><p>{mode==='demo'?'Demonstração por regras. Modelo de IA ainda não conectado.':'Confira as fontes antes de tomar decisões.'}</p></form></SheetContent></Sheet>
- </SidebarProvider>
+import { useEffect, useMemo, useState } from 'react';
+import { Activity, Bell, CalendarDays, ChevronRight, CircleAlert, Database, Info, LayoutDashboard, MessageSquareText, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Indicator, indicators as demo } from '@/lib/indicators';
+import { cn } from '@/lib/utils';
+import { DOMAINS, DOMAIN_META, Domain, PERIOD, statusAt, statusOf } from '@/lib/presentation';
+import { ActionNow } from '@/components/governance/action-now';
+import { AlertList } from '@/components/governance/alert-list';
+import { AppSidebar, View } from '@/components/governance/app-sidebar';
+import { DomainCards } from '@/components/governance/domain-cards';
+import { IndicatorDetail } from '@/components/governance/indicator-detail';
+import { IndicatorTable } from '@/components/governance/indicator-table';
+import { KpiCard } from '@/components/governance/kpi-card';
+import { Priorities } from '@/components/governance/priorities';
+import { Message, SinvalChat } from '@/components/governance/sinval-chat';
+import { SinvalCard } from '@/components/governance/sinval-card';
+import { SinvalMark } from '@/components/governance/sinval-mark';
+import { Filter } from '@/components/governance/status-filter';
+import { TrendChart } from '@/components/governance/trend-chart';
+
+const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
+  'Visão geral': { eyebrow: 'Privacidade, proteção e riscos de IA', subtitle: 'Transforme indicadores em decisões. Antecipe o que precisa de atenção.' },
+  'Privacidade de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Privacidade de dados'].blurb },
+  'Proteção de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Proteção de dados'].blurb },
+  'Riscos de IA': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Riscos de IA'].blurb },
+  'Central de alertas': { eyebrow: 'Acompanhamento', subtitle: 'Desvios da meta com contexto, responsável, prazo sugerido e próxima ação.' },
+};
+
+export default function Page() {
+  const [view, setView] = useState<View>('Visão geral');
+  const [rows, setRows] = useState<Indicator[]>(demo);
+  const [mode, setMode] = useState('demo');
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<Filter>('Todos');
+  const [selected, setSelected] = useState<Indicator | null>(null);
+  const [chat, setChat] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    fetch('/api/indicators')
+      .then(r => { if (!r.ok) throw Error(); return r.json(); })
+      .then(d => { setRows(d.indicators); setMode(d.mode); })
+      .catch(() => setError('Não foi possível atualizar a base. Exibindo os dados demonstrativos locais.'));
+  }, []);
+
+  const isDomain = (DOMAINS as readonly string[]).includes(view);
+  const scope = useMemo(() => (isDomain ? rows.filter(i => i.domain === view) : rows), [rows, view, isDomain]);
+  const visible = useMemo(() => scope.filter(i => filter === 'Todos' || statusOf(i) === filter), [scope, filter]);
+
+  const count = (s: 'Na meta' | 'Atenção' | 'Crítico', at?: 'previous') => scope.filter(i => (at ? statusAt(i, i.previous) : statusOf(i)) === s).length;
+  const healthy = count('Na meta'), attention = count('Atenção'), critical = count('Crítico');
+  const openCount = attention + critical;
+
+  async function ask(q: string) {
+    if (!q.trim() || busy) return;
+    setChat(true);
+    setMessages(m => [...m, { role: 'user', text: q }]);
+    setBusy(true);
+    try {
+      const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, domain: isDomain ? view : 'Todos' }) });
+      if (!r.ok) throw Error('Não foi possível concluir a análise. Tente novamente.');
+      const d = await r.json();
+      setMessages(m => [...m, { role: 'assistant', text: d.answer }]);
+    } catch (e) {
+      setMessages(m => [...m, { role: 'assistant', text: e instanceof Error ? e.message : 'Serviço indisponível.' }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function navigate(v: View, f: Filter = 'Todos') {
+    setView(v);
+    setFilter(f);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const copy = VIEW_COPY[view];
+
+  return (
+    <SidebarProvider style={{ '--sidebar-width': '260px' } as React.CSSProperties}>
+      <AppSidebar view={view} rows={rows} onNavigate={navigate} onOpenSinval={() => setChat(true)} />
+
+      <SidebarInset className="min-w-0">
+        {/* Topbar */}
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-n-200 bg-white/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 text-[13px] text-n-500">
+            <SidebarTrigger className="size-9 rounded-lg text-n-700 hover:bg-n-100 md:hidden" aria-label="Abrir navegação" />
+            <span className="hidden sm:inline">Governança</span>
+            <ChevronRight size={14} className="hidden sm:inline" aria-hidden />
+            <strong className="truncate font-semibold text-n-900">{view}</strong>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn('hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 sm:inline-flex', mode === 'demo' ? 'bg-warn-100 text-warn-600 ring-warn-200' : 'bg-ok-100 text-ok-600 ring-ok-200')}>
+              <Database size={12} aria-hidden />{mode === 'demo' ? 'Dados fictícios' : 'Base conectada'}
+            </span>
+            <button type="button" aria-label={`Central de alertas, ${openCount} abertos`} onClick={() => navigate('Central de alertas')} className="relative inline-flex size-9 items-center justify-center rounded-lg text-n-700 transition-colors hover:bg-n-100">
+              <Bell size={18} aria-hidden />
+              {openCount > 0 && <span className="num absolute -top-0.5 -right-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">{openCount}</span>}
+            </button>
+            <button type="button" onClick={() => setChat(true)} className="ink-gradient inline-flex h-9 items-center gap-2 rounded-lg pl-1.5 pr-3 text-[13px] font-semibold text-white shadow-[var(--shadow-1)] transition-opacity hover:opacity-95">
+              <SinvalMark size={24} inverted />
+              <span className="hidden sm:inline">Seu Sinval</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 pt-6 pb-10 sm:px-6 lg:px-8 lg:pt-8">
+          {/* Título */}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <div className="eyebrow">{copy.eyebrow}</div>
+              <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight text-n-900 sm:text-[30px]">{view}</h1>
+              <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-n-500">{copy.subtitle}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-[12.5px] font-medium text-n-700 ring-1 ring-n-200">
+                <CalendarDays size={15} className="text-n-500" aria-hidden />{PERIOD.label}
+              </span>
+              <span className="hidden h-9 items-center gap-2 rounded-lg px-2 text-[12px] text-n-500 md:inline-flex">Referência: {PERIOD.reference}</span>
+            </div>
+          </div>
+
+          {error && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-warn-200 bg-warn-100 px-4 py-3 text-[13px] text-warn-600">
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />{error}
+            </div>
+          )}
+
+          {view === 'Central de alertas' ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <KpiCard label="Críticos" value={critical} unit={critical ? 'ação imediata' : 'nenhum'} context="Desvio acima de 10 p.p. ou incidente" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Filtrar críticos' : undefined} onCta={() => setFilter('Crítico')} />
+                <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Até 10 p.p. da meta" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Filtrar atenção' : undefined} onCta={() => setFilter('Atenção')} />
+                <KpiCard label="Na meta" value={healthy} unit={`de ${scope.length}`} context="Sem alerta aberto" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
+              </div>
+              <AlertList scope={scope} filter={filter} onFilter={setFilter} onSelect={setSelected} onAsk={ask} />
+            </>
+          ) : (
+            <>
+              {/* KPIs */}
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiCard label="Indicadores monitorados" value={scope.length} unit="indicadores" context={isDomain ? 'Domínio selecionado' : '3 domínios de governança'} icon={LayoutDashboard} />
+                <KpiCard label="Dentro da meta" value={healthy} unit={`${Math.round((healthy / (scope.length || 1)) * 100)}%`} context="Controles em patamar esperado" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
+                <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Próximos da meta estabelecida" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Ver em atenção' : undefined} onCta={() => navigate('Central de alertas', 'Atenção')} />
+                <KpiCard label="Críticos" value={critical} unit={critical ? 'ação necessária' : 'nenhum'} context="Desvio relevante da meta" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Ver prioridades' : undefined} onCta={() => navigate('Central de alertas', 'Crítico')} />
+              </div>
+
+              {/* Ação agora + prioridades */}
+              <div className="grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-7"><ActionNow rows={scope} onSelect={setSelected} onSeeAll={() => navigate('Central de alertas')} /></div>
+                <div className="lg:col-span-5"><Priorities rows={scope} onSelect={setSelected} onAsk={ask} /></div>
+              </div>
+
+              {/* Panorama por domínio */}
+              {!isDomain && (
+                <section aria-labelledby="domains-title" className="flex flex-col gap-3">
+                  <div className="flex items-end justify-between gap-3 px-0.5">
+                    <div>
+                      <div className="eyebrow">Panorama</div>
+                      <h2 id="domains-title" className="text-[15px] font-semibold tracking-tight text-n-900 sm:text-base">Três domínios de governança</h2>
+                    </div>
+                  </div>
+                  <DomainCards rows={rows} onOpen={d => navigate(d)} />
+                </section>
+              )}
+
+              {/* Tendência + Seu Sinval */}
+              <div className="grid gap-4 lg:grid-cols-12">
+                <div className="lg:col-span-7 xl:col-span-8"><TrendChart rows={rows} highlight={isDomain ? (view as Domain) : undefined} /></div>
+                <div className="lg:col-span-5 xl:col-span-4"><SinvalCard rows={scope} view={view} mode={mode} onAsk={ask} onOpen={() => setChat(true)} /></div>
+              </div>
+
+              {/* Tabela */}
+              <IndicatorTable
+                rows={visible}
+                scope={scope}
+                filter={filter}
+                onFilter={setFilter}
+                onSelect={setSelected}
+                title={isDomain ? `Indicadores de ${view}` : 'Panorama dos indicadores'}
+                description="Resultado, meta, tendência de seis meses e situação em um só lugar."
+              />
+            </>
+          )}
+
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-n-200 pt-5 text-[11.5px] text-n-500">
+            <span>itaú unibanco <span aria-hidden className="mx-1.5">·</span> Governança de dados e IA</span>
+            <span className="inline-flex items-center gap-1.5"><Info size={12} aria-hidden />Protótipo conceitual · metas e dados demonstrativos · projeções são cenários ilustrativos</span>
+          </footer>
+        </div>
+      </SidebarInset>
+
+      <IndicatorDetail indicator={selected} onClose={() => setSelected(null)} onAsk={ask} />
+      <SinvalChat open={chat} onOpenChange={setChat} messages={messages} busy={busy} mode={mode} view={view} rows={scope} onAsk={ask} />
+
+      {/* Acesso rápido ao assistente no mobile */}
+      <button
+        type="button"
+        onClick={() => setChat(true)}
+        aria-label="Abrir Seu Sinval"
+        className="ink-gradient fixed right-4 bottom-4 z-30 inline-flex h-12 items-center gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-semibold text-white shadow-[var(--shadow-3)] md:hidden"
+      >
+        <SinvalMark size={36} inverted /> <MessageSquareText size={16} aria-hidden /> Seu Sinval
+      </button>
+    </SidebarProvider>
+  );
 }

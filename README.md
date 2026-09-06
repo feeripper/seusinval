@@ -4,12 +4,21 @@ Protótipo React com identidade visual inspirada no Itaú Unibanco, indicadores 
 
 ## Estrutura
 
-- `app/page.tsx`: interface React responsiva.
-- `app/globals.css`: identidade visual e layout.
-- `lib/indicators.ts`: cálculo de situação, projeção e análise demonstrativa.
+- `app/page.tsx`: composição das telas (visão geral, domínios, central de alertas) e estado da aplicação.
+- `app/globals.css`: design system — tokens de cor (marca, azul de inteligência, neutros, status), tipografia, raios, sombras e utilitários (`surface`, `num`, `eyebrow`, `ink-gradient`).
+- `lib/indicators.ts`: cálculo de situação, projeção e análise demonstrativa (regras de negócio).
+- `lib/presentation.ts`: helpers exclusivamente de apresentação (rótulos, ordenação por severidade, textos de contexto, série do gráfico, perguntas sugeridas e estruturação da resposta do assistente). Não altera regras nem dados.
+- `components/governance/`: componentes reutilizáveis da plataforma.
+  - `status-badge.tsx` (situação com ícone + texto), `kpi-card.tsx`, `panel.tsx`, `status-filter.tsx`, `sparkline.tsx`, `sinval-mark.tsx`.
+  - `action-now.tsx` (exige ação agora), `priorities.tsx` (ações recomendadas), `domain-cards.tsx`, `trend-chart.tsx` (histórico × cenário).
+  - `indicator-table.tsx` (tabela + cards mobile), `alert-list.tsx` (alertas acionáveis), `indicator-detail.tsx` (análise executiva), `sinval-chat.tsx` (assistente com respostas estruturadas), `app-sidebar.tsx`.
 - `backend/indicators.json`: base única de nove indicadores fictícios.
 - `app/api/*`: demonstração e proxy de servidor para o Go.
 - `backend/`: serviço Go independente, Dockerfile e instruções de integração com IA.
+
+### Direção visual
+
+Workspace executivo de governança e IA: superfícies claras, laranja reservado a CTAs e destaques, azul profundo para a área de inteligência (Seu Sinval), neutros frios no restante. Situação sempre comunicada por ícone + texto, não apenas por cor. Projeções aparecem como "cenário ilustrativo" e os dados como fictícios em todas as superfícies.
 
 O frontend publicado funciona sem credenciais, em modo demonstrativo. O backend Go foi escrito, mas não compilado neste ambiente (Go indisponível) nem hospedado. A integração real com o modelo requer configuração de endpoint e credenciais no Go. Veja `backend/README.md`.
 
