@@ -1,6 +1,15 @@
 import { indicators } from '@/lib/indicators';
-export async function GET(){
- const base=process.env.GO_API_URL;
- if(!base)return Response.json({indicators,mode:'demo'});
- try{const r=await fetch(base.replace(/\/$/,'')+'/api/indicators',{headers:{Authorization:'Bearer '+process.env.GO_API_TOKEN},signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error();return Response.json(await r.json())}catch{return Response.json({error:'Backend indisponível'},{status:502})}
+import { goBase, goHeaders } from '@/lib/go-proxy';
+
+export async function GET() {
+  const base = goBase();
+  if (!base) return Response.json({ indicators, mode: 'demo' });
+  try {
+    const r = await fetch(base + '/api/indicators', { headers: goHeaders(), signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw Error();
+    const data = await r.json();
+    return Response.json({ indicators: data.indicators ?? indicators, mode: data.mode === 'llm' ? 'llm' : 'demo' });
+  } catch {
+    return Response.json({ indicators, mode: 'demo', error: 'Backend indisponível' }, { status: 200 });
+  }
 }

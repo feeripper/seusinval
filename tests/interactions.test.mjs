@@ -41,6 +41,7 @@ test("chat lists the four bots and can clear history", async () => {
   assert.match(source, /Limpar conversa/);
   assert.match(source, /\{DISCLAIMER\}/);
   assert.match(source, /onAgentChange/);
+  assert.match(source, /idx === messages.length - 1/);
 });
 
 test("domain cards, KPIs and table rows are actionable", async () => {

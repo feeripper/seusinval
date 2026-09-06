@@ -136,7 +136,7 @@ export function SinvalChat({
                         </div>
                         <div className="surface rounded-2xl rounded-tl-md p-4">
                           <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-n-800">{m.text}</p>
-                          {m.actions && m.actions.length > 0 && (
+                          {m.actions && m.actions.length > 0 && idx === messages.length - 1 && !m.streaming && (
                             <div className="mt-3 flex flex-wrap gap-2">
                               {m.actions.map(action => (
                                 <button key={action} type="button" onClick={() => onAsk(action)} className="rounded-md bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">

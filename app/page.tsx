@@ -5,7 +5,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Indicator, indicators as demo } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAINS, DOMAIN_META, Domain, PERIOD, statusAt, statusOf } from '@/lib/presentation';
-import { AgentId, agentById } from '@/lib/agents';
+import { AgentId, agentById, questionFromAction } from '@/lib/agents';
 import { ActionNow } from '@/components/governance/action-now';
 import { AlertList } from '@/components/governance/alert-list';
 import { AppSidebar, View } from '@/components/governance/app-sidebar';
@@ -33,6 +33,7 @@ export default function Page() {
   const [view, setView] = useState<View>('Governança');
   const [rows, setRows] = useState<Indicator[]>(demo);
   const [mode, setMode] = useState('demo');
+  const [aiReady, setAiReady] = useState(false);
   const [error, setError] = useState('');
   const [chatError, setChatError] = useState('');
   const [filter, setFilter] = useState<Filter>('Todos');
@@ -47,11 +48,11 @@ export default function Page() {
   useEffect(() => {
     fetch('/api/indicators')
       .then(r => { if (!r.ok) throw Error(); return r.json(); })
-      .then(d => { setRows(d.indicators); setMode(d.mode === 'llm' ? 'llm' : d.mode); })
+      .then(d => { if (Array.isArray(d.indicators)) setRows(d.indicators); setMode(d.mode === 'llm' ? 'llm' : 'demo'); })
       .catch(() => setError('Não foi possível atualizar a base. Exibindo os dados demonstrativos locais.'));
     fetch('/api/agents')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.agents?.some((a: { status: string }) => a.status === 'disponível')) setMode('llm'); })
+      .then(d => { if (d?.agents?.some((a: { status: string }) => a.status === 'disponível')) setAiReady(true); })
       .catch(() => undefined);
   }, []);
 
@@ -64,7 +65,8 @@ export default function Page() {
   const openCount = attention + critical;
 
   async function ask(q: string) {
-    if (!q.trim() || busy) return;
+    q = questionFromAction(q.trim());
+    if (!q || busy) return;
     setChat(true);
     setChatError('');
     setMessages(m => [...m, { role: 'user', text: q }]);
@@ -105,6 +107,7 @@ export default function Page() {
             });
           },
           onDone(done) {
+            setAiReady(true);
             if (done.conversationId) setConversationId(done.conversationId);
             if (done.agent?.id) setAgentId(done.agent.id as AgentId);
             setMessages(m => {
@@ -118,6 +121,7 @@ export default function Page() {
         });
       } else {
         const d = await r.json();
+        setAiReady(true);
         if (d.conversationId) setConversationId(d.conversationId);
         const id = (d.agent?.id as AgentId) || agentId;
         setAgentId(id);
@@ -242,7 +246,7 @@ export default function Page() {
               {/* Tendência + Seu Sinval */}
               <div className="grid gap-4 lg:grid-cols-12">
                 <div className="lg:col-span-7 xl:col-span-8"><TrendChart rows={rows} highlight={isDomain ? (view as Domain) : undefined} /></div>
-                <div className="lg:col-span-5 xl:col-span-4"><SinvalCard rows={scope} view={view} mode={mode} onAsk={ask} onOpen={() => setChat(true)} /></div>
+                <div className="lg:col-span-5 xl:col-span-4"><SinvalCard rows={scope} view={view} mode={aiReady ? 'llm' : mode} onAsk={ask} onOpen={() => setChat(true)} /></div>
               </div>
 
               {/* Tabela */}
@@ -273,7 +277,7 @@ export default function Page() {
         busy={busy}
         statusLine={statusLine}
         error={chatError}
-        mode={mode}
+        mode={aiReady ? 'llm' : mode}
         view={view}
         rows={scope}
         agentId={agentId}

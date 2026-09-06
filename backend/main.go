@@ -23,20 +23,20 @@ import (
 var seed []byte
 
 type Indicator struct {
- ID string `json:"id"`
- Name string `json:"name"`
- Domain string `json:"domain"`
- Value float64 `json:"value"`
- Previous float64 `json:"previous"`
- Target float64 `json:"target"`
- Unit string `json:"unit"`
- Direction string `json:"direction"`
- Owner string `json:"owner"`
- Source string `json:"source"`
- Numerator float64 `json:"numerator"`
- Denominator float64 `json:"denominator"`
- Action string `json:"action"`
- History []float64 `json:"history"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Domain      string    `json:"domain"`
+	Value       float64   `json:"value"`
+	Previous    float64   `json:"previous"`
+	Target      float64   `json:"target"`
+	Unit        string    `json:"unit"`
+	Direction   string    `json:"direction"`
+	Owner       string    `json:"owner"`
+	Source      string    `json:"source"`
+	Numerator   float64   `json:"numerator"`
+	Denominator float64   `json:"denominator"`
+	Action      string    `json:"action"`
+	History     []float64 `json:"history"`
 }
 type App struct {
 	Rows  []Indicator
@@ -76,7 +76,11 @@ func (a *App) handler() http.Handler {
 		reply(w, 200, map[string]any{"status": "ok", "mode": mode})
 	})
 	mux.HandleFunc("GET /api/indicators", func(w http.ResponseWriter, r *http.Request) {
-		reply(w, 200, map[string]any{"indicators": a.Rows, "mode": "demo"})
+		mode := "demo"
+		if a.AI != nil && a.AI.Ready() {
+			mode = "llm"
+		}
+		reply(w, 200, map[string]any{"indicators": a.Rows, "mode": mode})
 	})
 	mux.HandleFunc("GET /api/agents", func(w http.ResponseWriter, r *http.Request) {
 		status := "indisponível"

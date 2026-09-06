@@ -76,3 +76,18 @@ export function questionsFor(agent: Agent, view: string): string[] {
   if (view === 'Riscos de IA') return AGENTS[1].questions;
   return agent.questions;
 }
+
+const ACTION_QUESTIONS: Record<string, string> = {
+  'Ver riscos relacionados': 'Quais riscos de IA estão críticos neste recorte e o que mitigar primeiro?',
+  'Criar plano de mitigação': 'Monte um plano de 30 dias para os modelos de IA fora da meta, com dono e evidência.',
+  'Revisar controles técnicos': 'O que revisar agora em criptografia, acessos privilegiados e incidentes de exposição?',
+  'Abrir acompanhamento de incidente': 'Como tratar os incidentes de exposição de dados do painel, com contenção, dono e evidência?',
+  'Ver direitos dos titulares': 'Quais solicitações de titulares estão fora do prazo e o que a área deve fazer nesta semana?',
+  'Avaliar necessidade de RIPD': 'Quando um RIPD é necessário neste recorte e o que o painel já mostra sobre avaliações de impacto?',
+  'Ver indicadores em atenção': 'Quais indicadores precisam de atenção e o que priorizar nesta semana?',
+  'Perguntar a um especialista': 'Resuma o panorama de governança e diga qual especialista deve entrar em cada prioridade.',
+};
+
+export function questionFromAction(label: string): string {
+  return ACTION_QUESTIONS[label] ?? label;
+}

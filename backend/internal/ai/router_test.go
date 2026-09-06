@@ -88,4 +88,7 @@ func TestSuggestedActions(t *testing.T) {
 	if len(SuggestedActions(AgentAurora)) == 0 {
 		t.Fatal("aurora actions")
 	}
+	if SuggestedActions(AgentOctave)[0] == "Revisar controles técnicos" {
+		t.Fatal("actions must be questions, not labels")
+	}
 }
