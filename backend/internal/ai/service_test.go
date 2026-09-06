@@ -47,6 +47,9 @@ func TestAskUsesRoutedPromptAndEvidence(t *testing.T) {
 	if !strings.Contains(fake.last.Instructions, "IA-001") {
 		t.Fatal("evidence missing")
 	}
+	if !strings.Contains(fake.last.Instructions, "Painel de evidência") {
+		t.Fatal("formatted evidence missing")
+	}
 	if res.ConversationID == "" {
 		t.Fatal("conversation id")
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	PromptVersion   = "2026-04"
+	PromptVersion   = "2026-09"
 	Disclaimer      = "As respostas são orientativas e devem ser validadas pelas áreas de Privacidade, Segurança, Risco e Jurídico."
 	MaxMessageRunes = 2000
 	MaxHistory      = 12

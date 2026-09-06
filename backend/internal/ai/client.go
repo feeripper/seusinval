@@ -39,12 +39,12 @@ func (c *Client) Ready() bool {
 }
 
 type responsesPayload struct {
-	Model        string `json:"model"`
-	Instructions string `json:"instructions,omitempty"`
-	Input        []Turn `json:"input"`
+	Model        string  `json:"model"`
+	Instructions string  `json:"instructions,omitempty"`
+	Input        []Turn  `json:"input"`
 	Temperature  float64 `json:"temperature"`
-	MaxOutput    int    `json:"max_output_tokens"`
-	Stream       bool   `json:"stream,omitempty"`
+	MaxOutput    int     `json:"max_output_tokens"`
+	Stream       bool    `json:"stream,omitempty"`
 }
 
 type responsesBody struct {
@@ -116,8 +116,8 @@ func (c *Client) do(ctx context.Context, req CompletionRequest, stream bool) (io
 		Model:        c.Model,
 		Instructions: req.Instructions,
 		Input:        req.Input,
-		Temperature:  0.2,
-		MaxOutput:    1600,
+		Temperature:  0.4,
+		MaxOutput:    2200,
 		Stream:       stream,
 	}
 	raw, err := json.Marshal(payload)

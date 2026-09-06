@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,19 +21,19 @@ var (
 )
 
 type IndicatorEvidence struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Domain      string    `json:"domain"`
-	Value       float64   `json:"value"`
-	Previous    float64   `json:"previous"`
-	Target      float64   `json:"target"`
-	Unit        string    `json:"unit"`
-	Direction   string    `json:"direction"`
-	Owner       string    `json:"owner"`
-	Source      string    `json:"source"`
-	Action      string    `json:"action"`
-	History     []float64 `json:"history"`
-	Status      string    `json:"status"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Domain    string    `json:"domain"`
+	Value     float64   `json:"value"`
+	Previous  float64   `json:"previous"`
+	Target    float64   `json:"target"`
+	Unit      string    `json:"unit"`
+	Direction string    `json:"direction"`
+	Owner     string    `json:"owner"`
+	Source    string    `json:"source"`
+	Action    string    `json:"action"`
+	History   []float64 `json:"history"`
+	Status    string    `json:"status"`
 }
 
 type Service struct {
@@ -121,11 +122,59 @@ func (s *Service) prepare(req ChatRequest) (string, Agent, string, error) {
 
 func (s *Service) completion(req ChatRequest, text string, agent Agent, convID string) CompletionRequest {
 	evidence := filterEvidence(s.Evidence, req.Domain, req.Context.SelectedIndicator)
-	raw, _ := json.Marshal(evidence)
-	instructions := SystemPrompt(agent.ID) + "\nPrompt version: " + PromptVersion + "\nContexto da tela: página=" + empty(req.Context.CurrentPage) + "; domínio=" + empty(req.Domain) + "; indicador=" + empty(req.Context.SelectedIndicator) + ".\nEvidência JSON: " + string(raw)
+	instructions := SystemPrompt(agent.ID) + "\nPrompt version: " + PromptVersion + "\n" + screenContext(req) + "\n\nPainel de evidência (agosto de 2026, base demonstrativa):\n" + formatEvidence(evidence)
 	input := append([]Turn{}, s.history(convID)...)
 	input = append(input, Turn{Role: "user", Content: text})
 	return CompletionRequest{Instructions: instructions, Input: input}
+}
+
+func screenContext(req ChatRequest) string {
+	return "Contexto da tela: página=" + empty(req.Context.CurrentPage) + "; domínio=" + empty(req.Domain) + "; indicador selecionado=" + empty(req.Context.SelectedIndicator) + "."
+}
+
+func formatEvidence(rows []IndicatorEvidence) string {
+	if len(rows) == 0 {
+		return "(nenhum indicador neste recorte)"
+	}
+	var b strings.Builder
+	for _, r := range rows {
+		unit := r.Unit
+		b.WriteString("- ")
+		b.WriteString(r.ID)
+		b.WriteString(" | ")
+		b.WriteString(r.Name)
+		b.WriteString(" | ")
+		b.WriteString(r.Domain)
+		b.WriteString(" | situação=")
+		b.WriteString(r.Status)
+		b.WriteString(" | atual=")
+		b.WriteString(fmtNum(r.Value, unit))
+		b.WriteString(" | anterior=")
+		b.WriteString(fmtNum(r.Previous, unit))
+		b.WriteString(" | meta=")
+		b.WriteString(fmtNum(r.Target, unit))
+		b.WriteString(" | dono=")
+		b.WriteString(r.Owner)
+		b.WriteString(" | fonte=")
+		b.WriteString(r.Source)
+		b.WriteString(" | ação=")
+		b.WriteString(r.Action)
+		if len(r.History) > 0 {
+			raw, _ := json.Marshal(r.History)
+			b.WriteString(" | histórico=")
+			b.Write(raw)
+		}
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func fmtNum(v float64, unit string) string {
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	if unit != "" {
+		return s + unit
+	}
+	return s
 }
 
 func (s *Service) response(convID string, agent Agent, message string) ChatResponse {
