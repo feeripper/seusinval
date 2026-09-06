@@ -111,7 +111,7 @@ export function suggestedQuestions(view: string, rows: Indicator[]) {
   const first = open[0];
   const list: string[] = [];
   if (first) list.push(`Por que ${first.id} está ${statusOf(first).toLowerCase()}?`);
-  list.push(view === 'Visão geral' || view === 'Central de alertas' ? 'Quais indicadores precisam de atenção?' : `Resuma as prioridades em ${view}`);
+  list.push(view === 'Visão geral' || view === 'Governança' || view === 'Central de alertas' ? 'Quais indicadores precisam de atenção?' : `Resuma as prioridades em ${view}`);
   list.push('Qual a tendência para o próximo mês?');
   if (view === 'Visão geral') list.push('Resuma os riscos de IA');
   return Array.from(new Set(list)).slice(0, 4);

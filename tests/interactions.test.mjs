@@ -1,0 +1,88 @@
+import assert from "node:assert/strict";
+import test, { after } from "node:test";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { createServer } from "vite";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const vite = await createServer({
+  appType: "custom",
+  configFile: false,
+  root,
+  resolve: { alias: { "@": root } },
+  server: { middlewareMode: true },
+});
+
+after(async () => {
+  await vite.close();
+});
+
+test("sidebar exposes a working Governança control", async () => {
+  const source = await readFile(path.join(root, "components/governance/app-sidebar.tsx"), "utf8");
+  assert.match(source, /go\('Governança'\)/);
+  assert.match(source, /label="Governança"/);
+  assert.match(source, /Ir para Governança de dados e IA/);
+});
+
+test("page breadcrumb navigates to Governança", async () => {
+  const source = await readFile(path.join(root, "app/page.tsx"), "utf8");
+  assert.match(source, /navigate\('Governança'\)/);
+  assert.match(source, /onAgentChange=\{setAgentId\}/);
+  assert.match(source, /onClear=\{clearChat\}/);
+});
+
+test("chat lists the four bots and can clear history", async () => {
+  const { AGENTS, DISCLAIMER } = await vite.ssrLoadModule("/lib/agents.ts");
+  assert.deepEqual(AGENTS.map(a => a.id), ["sinval", "aurora", "octave", "sherlock"]);
+  assert.match(DISCLAIMER, /As respostas são orientativas/);
+  const source = await readFile(path.join(root, "components/governance/sinval-chat.tsx"), "utf8");
+  assert.match(source, /Escolher assistente/);
+  assert.match(source, /Limpar conversa/);
+  assert.match(source, /\{DISCLAIMER\}/);
+  assert.match(source, /onAgentChange/);
+});
+
+test("domain cards, KPIs and table rows are actionable", async () => {
+  const cards = await readFile(path.join(root, "components/governance/domain-cards.tsx"), "utf8");
+  assert.match(cards, /onClick=\{\(\) => onOpen\(domain\)\}/);
+  assert.match(cards, /Explorar domínio/);
+  const kpi = await readFile(path.join(root, "components/governance/kpi-card.tsx"), "utf8");
+  assert.match(kpi, /cta && onCta && 'surface-hover'/);
+  const page = await readFile(path.join(root, "app/page.tsx"), "utf8");
+  assert.match(page, /onOpen=\{d => navigate\(d\)\}/);
+  assert.match(page, /navigate\('Central de alertas', 'Crítico'\)/);
+  const table = await readFile(path.join(root, "components/governance/indicator-table.tsx"), "utf8");
+  assert.match(table, /onClick=\{\(\) => onSelect\(i\)\}/);
+});
+
+test("frontend never ships an OpenAI key", async () => {
+  const files = [
+    "app/api/chat/route.ts",
+    "app/api/agents/route.ts",
+    "lib/go-proxy.ts",
+    "lib/agents.ts",
+    "app/page.tsx",
+  ];
+  for (const file of files) {
+    const source = await readFile(path.join(root, file), "utf8");
+    assert.doesNotMatch(source, /sk-[A-Za-z0-9]/);
+    assert.doesNotMatch(source, /NEXT_PUBLIC_OPENAI/);
+    assert.doesNotMatch(source, /VITE_OPENAI/);
+  }
+});
+
+test("frontend chat route never embeds an OpenAI key", async () => {
+  const source = await readFile(path.join(root, "app/api/chat/route.ts"), "utf8");
+  assert.doesNotMatch(source, /OPENAI_API_KEY/);
+  assert.doesNotMatch(source, /NEXT_PUBLIC_/);
+  assert.match(source, /goBase/);
+});
+
+test("status filter and clear-filter controls exist", async () => {
+  const table = await readFile(path.join(root, "components/governance/indicator-table.tsx"), "utf8");
+  assert.match(table, /Limpar filtro/);
+  assert.match(table, /onFilter/);
+  const alerts = await readFile(path.join(root, "components/governance/alert-list.tsx"), "utf8");
+  assert.match(alerts, /Limpar filtro/);
+});

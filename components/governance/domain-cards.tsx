@@ -20,7 +20,8 @@ export function DomainCards({ rows, onOpen }: { rows: Indicator[]; onOpen: (d: D
         const total = s.group.length || 1;
         const up = s.diff >= 0;
         return (
-          <article key={domain} role="listitem" className="surface surface-hover group flex flex-col gap-4 p-5">
+          <article key={domain} role="listitem" className="surface surface-hover group relative flex flex-col gap-4 p-5">
+            <button type="button" onClick={() => onOpen(domain)} className="absolute inset-0 z-0 rounded-2xl" aria-label={`Abrir ${domain}`} />
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="inline-flex size-10 items-center justify-center rounded-xl text-white" style={{ background: meta.color }}>
@@ -61,7 +62,7 @@ export function DomainCards({ rows, onOpen }: { rows: Indicator[]; onOpen: (d: D
               {s.worst ? <><span className="font-medium text-n-700">Prioridade:</span> {s.worst.name}.</> : meta.blurb}
             </p>
 
-            <button type="button" onClick={() => onOpen(domain)} className="mt-auto inline-flex w-fit items-center gap-1 text-[13px] font-semibold text-brand-600 transition-colors hover:text-brand-700">
+            <button type="button" onClick={() => onOpen(domain)} className="relative z-10 mt-auto inline-flex w-fit items-center gap-1 text-[13px] font-semibold text-brand-600 transition-colors hover:text-brand-700">
               Explorar domínio <ArrowRight size={14} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
             </button>
           </article>

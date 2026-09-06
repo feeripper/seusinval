@@ -46,7 +46,7 @@ export function KpiCard({
   const good = hasChange && (change === 0 || (changeGoodWhen === 'up' ? change > 0 : change < 0));
   const ChangeIcon = !hasChange || change === 0 ? Minus : change > 0 ? TrendingUp : TrendingDown;
   return (
-    <article className={cn('surface surface-hover relative flex flex-col gap-3 p-5', emphasis && 'ring-1 ring-crit-200')}>
+    <article className={cn('surface relative flex flex-col gap-3 p-5', cta && onCta && 'surface-hover', emphasis && 'ring-1 ring-crit-200')}>
       <div className="flex items-start justify-between gap-2">
         <span className="text-[13px] font-medium text-n-600">{label}</span>
         <span className={cn('inline-flex size-8 items-center justify-center rounded-lg', TONE_ICON_BG[tone])}>

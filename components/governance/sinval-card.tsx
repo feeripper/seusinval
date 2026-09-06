@@ -49,7 +49,7 @@ export function SinvalCard({ rows, view, mode, onAsk, onOpen }: { rows: Indicato
         <MessageSquareText size={16} aria-hidden /> Abrir conversa
       </button>
       <p className="relative mt-3 text-center text-[11px] text-white/55">
-        {mode === 'demo' ? 'Demonstração · análise por regras sobre dados fictícios' : 'Respostas fundamentadas nos indicadores conectados'}
+        {mode === 'llm' ? 'Respostas do motor OpenAI, com validação humana obrigatória' : 'Conecte o backend Go com OPENAI_API_KEY para ativar o assistente'}
       </p>
     </section>
   );

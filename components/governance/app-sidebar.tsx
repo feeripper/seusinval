@@ -1,5 +1,5 @@
 'use client';
-import { Bell, BrainCircuit, LayoutDashboard, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Bell, BrainCircuit, LayoutDashboard, LockKeyhole, Scale, ShieldCheck } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { Indicator } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
@@ -7,7 +7,7 @@ import { DOMAINS, Domain, statusOf } from '@/lib/presentation';
 import { SinvalMark } from './sinval-mark';
 import { StatusDot } from './status-badge';
 
-export type View = 'Visão geral' | Domain | 'Central de alertas';
+export type View = 'Governança' | 'Visão geral' | Domain | 'Central de alertas';
 
 const DOMAIN_ICONS: Record<Domain, React.ComponentType<{ size?: number; className?: string }>> = {
   'Privacidade de dados': ShieldCheck,
@@ -45,19 +45,20 @@ export function AppSidebar({ view, rows, onNavigate, onOpenSinval }: { view: Vie
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="gap-0 px-5 pt-6 pb-5">
-        <div className="flex items-center gap-3">
+        <button type="button" onClick={() => go('Governança')} className="flex items-center gap-3 rounded-xl text-left transition-colors hover:bg-n-50" aria-label="Ir para Governança de dados e IA">
           <div aria-label="itaú" className="flex size-11 items-end justify-center rounded-xl bg-brand-500 pb-1 text-[26px] leading-none font-bold tracking-[-0.06em] text-white">itaú</div>
           <div className="min-w-0">
             <div className="text-[15px] leading-tight font-semibold tracking-tight text-n-900">Governança</div>
             <div className="text-[11.5px] leading-tight text-n-500">dados &amp; inteligência artificial</div>
           </div>
-        </div>
+        </button>
       </SidebarHeader>
 
       <SidebarContent className="gap-1 px-3">
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="eyebrow h-7 px-3">Workspace</SidebarGroupLabel>
           <SidebarMenu className="gap-0.5">
+            <NavButton active={view === 'Governança'} onClick={() => go('Governança')} icon={Scale} label="Governança" />
             <NavButton active={view === 'Visão geral'} onClick={() => go('Visão geral')} icon={LayoutDashboard} label="Visão geral" />
           </SidebarMenu>
         </SidebarGroup>

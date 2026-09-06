@@ -1,30 +1,104 @@
 # Seu Sinval — backend Go
 
-Serviço Go independente do frontend React. API de indicadores e chat contextual, com autenticação de serviço, limites de entrada, timeouts e desligamento gracioso. A base embarcada é demonstrativa e não contém dados do Itaú. Sem banco de dados ou histórico persistente.
+Serviço Go independente do frontend React. API de indicadores e chat com quatro agentes, autenticação de serviço, limites de entrada, rate limit por IP, timeouts e desligamento gracioso. A base embarcada é demonstrativa e não contém dados do Itaú. Sem banco de dados persistente; o histórico de conversa vive em memória na sessão do processo.
+
+## Arquitetura de IA
+
+```
+internal/ai
+  types.go      agentes, contratos de request/response
+  prompts.go    prompts versionados (2026-04)
+  router.go     roteamento inteligente
+  client.go     OpenAI Responses API
+  service.go    orquestração, evidência e histórico
+  ratelimit.go  limite por IP
+```
+
+Agentes:
+
+- **Seu Sinval** (`sinval`): coordenador geral
+- **Aurora** (`aurora`): risco de IA
+- **Octave** (`octave`): proteção de dados
+- **Sherlock** (`sherlock`): privacidade de dados
+
+Se o usuário escolhe um especialista, a seleção é respeitada. Com Seu Sinval, a pergunta é classificada e encaminhada a um único especialista quando o assunto é claro; perguntas multidisciplinares permanecem com o coordenador.
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória | Uso |
+| --- | --- | --- |
+| `API_TOKEN` | sim | Bearer token do serviço (mínimo 24 caracteres) |
+| `PORT` | não | Porta HTTP, padrão `8080` |
+| `OPENAI_API_KEY` | para o chat | Chave da OpenAI. Nunca exponha no frontend. |
+| `OPENAI_MODEL` | não | Modelo da Responses API. Padrão `gpt-4.1-mini`. |
+
+A chave **não** deve existir em `VITE_`, `NEXT_PUBLIC_` ou no código do React. O frontend na Vercel só conhece `GO_API_URL` e `GO_API_TOKEN`.
 
 ## Executar
 
-Requer Go 1.22 ou superior. Defina `API_TOKEN` com segredo aleatório de ao menos 24 caracteres no ambiente e execute `go run .` nesta pasta. Porta padrão: 8080. Alternativamente, construa a imagem com `docker build -t seu-sinval .` e injete as variáveis no container por seu gerenciador de segredos.
+Requer Go 1.22 ou superior.
 
-- `GET /healthz`: prontidão, sem autenticação.
+```powershell
+$env:API_TOKEN="um-segredo-com-pelo-menos-24-chars"
+$env:OPENAI_API_KEY="sk-..."
+$env:OPENAI_MODEL="gpt-4.1-mini"
+go test ./...
+go run .
+```
+
+Imagem:
+
+```powershell
+docker build -t seu-sinval .
+```
+
+Injete as variáveis no container pelo gerenciador de segredos. Porta padrão: 8080.
+
+## Endpoints
+
+- `GET /healthz`: prontidão, sem autenticação. `mode` é `llm` quando a OpenAI está configurada.
 - `GET /api/indicators`: indicadores. Header `Authorization: Bearer <API_TOKEN>`.
-- `POST /api/chat`: JSON `{"question":"Analise IA-001", "domain":"Todos"}`; mesmo header.
-- Domínios: `Todos`, `Privacidade de dados`, `Proteção de dados`, `Riscos de IA`.
+- `GET /api/agents`: catálogo dos quatro bots e status.
+- `POST /api/chat`: chat. Aceita `message` ou `question`. Com `Accept: text/event-stream` ou `"stream": true`, responde em SSE (`meta`, `delta`, `done`, `error`).
 
-## Conectar a React
+Payload:
 
-Configure `GO_API_URL` (origem HTTPS do serviço Go) e `GO_API_TOKEN` no servidor do frontend. As rotas React `/api/indicators` e `/api/chat` encaminham as solicitações ao Go. Nunca coloque segredos em variáveis NEXT_PUBLIC. Sem GO_API_URL, o frontend fornece uma demonstração local por regras. Com Go indisponível, o painel informa a falha e mantém a base demonstrativa local; o chat informa erro.
+```json
+{
+  "message": "Quais são os riscos de usar IA generativa no atendimento?",
+  "agent": "sinval",
+  "conversationId": "uuid-opcional",
+  "domain": "Todos",
+  "context": { "selectedIndicator": "IA-001", "currentPage": "Governança" }
+}
+```
 
-## Modelo de IA
+Domínios: `Todos`, `Privacidade de dados`, `Proteção de dados`, `Riscos de IA`.
 
-Configure no Go `LLM_API_URL` (endpoint HTTPS de chat completions), `LLM_API_KEY` e `LLM_MODEL`. O contrato esperado recebe model e messages e retorna choices[0].message.content. Integre um gateway corporativo autorizado que exponha esse contrato; Amazon Bedrock nativo usa outro contrato e requer um adaptador, ainda não implementado. Sem todas essas variáveis, o Go responde com resumo determinístico da base e sinaliza modo demo. As respostas do modelo usam dados fictícios e precisam de avaliação humana.
+Limites: 2000 caracteres por mensagem, 20 requisições por IP por minuto, timeout de 40s na OpenAI. Falhas devolvem mensagem amigável, sem vazar a chave.
 
-## Próxima implantação corporativa
+## Conectar ao frontend (Vercel)
 
-A hospedagem demonstrativa executa React e rotas de demonstração em JavaScript. Ela não executa o binário Go. O Go deve ser implantado separadamente (por exemplo, ECS/Fargate com balanceador HTTPS). Ainda faltam conexão aos indicadores reais, SSO/RBAC, autorização por domínio no Go, persistência, auditoria, rate limiting no gateway, observabilidade e avaliação formal do assistente. O token atual identifica o serviço; não fornece autorização de usuários finais.
+No projeto Vercel, configure apenas:
 
-O CSS é inspirado na marca solicitada. Não utiliza biblioteca interna homologada nem representa produto oficial do Itaú.
+- `GO_API_URL`: origem HTTPS do serviço Go
+- `GO_API_TOKEN`: o mesmo valor de `API_TOKEN`
+
+As rotas Next.js `/api/indicators`, `/api/chat` e `/api/agents` fazem proxy. Sem `GO_API_URL`, o painel continua com a base demonstrativa e o chat informa indisponibilidade.
+
+## Deploy
+
+1. Publique este serviço em um host com HTTPS (Railway, Fly.io, ECS/Fargate, Cloud Run).
+2. Defina `API_TOKEN`, `OPENAI_API_KEY` e `OPENAI_MODEL` só nesse host.
+3. Aponte `GO_API_URL` / `GO_API_TOKEN` no Vercel e faça um novo deploy do frontend.
+4. Confirme `GET /healthz` com `"mode":"llm"` e uma pergunta no chat.
+
+O frontend na Vercel **não** executa o binário Go e **não** deve receber a chave da OpenAI.
 
 ## Validação
 
-O ambiente de criação não disponibiliza compilador Go. O frontend passa pelo build de produção; o backend deve ser compilado e seus testes executados no CI antes de implantação.
+```powershell
+go test ./...
+```
+
+Cobre roteamento, prompts, validação do endpoint, histórico e autenticação. Compile o serviço no CI antes da implantação.

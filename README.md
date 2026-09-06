@@ -1,35 +1,97 @@
 # Governança de dados e IA · Seu Sinval
 
-Protótipo React com identidade visual inspirada no Itaú Unibanco, indicadores de privacidade, proteção de dados e riscos de IA. Inclui panorama executivo, filtros, detalhes com fonte e responsável, alertas, histórico, projeção ilustrativa e chat demonstrativo fundamentado na base fictícia.
+Protótipo React com identidade visual inspirada no Itaú Unibanco, indicadores de privacidade, proteção de dados e riscos de IA. Inclui panorama executivo, filtros, detalhes, alertas, histórico, projeção ilustrativa e chat com quatro agentes. A chave da OpenAI vive apenas no backend Go.
+
+## Arquitetura
+
+- Frontend Next.js na Vercel: painel, rotas `/api/*` como proxy.
+- Backend Go separado: indicadores, agentes e motor OpenAI (Responses API).
+- Sem `OPENAI_API_KEY` no browser. Sem `VITE_` / `NEXT_PUBLIC_` para a chave.
+
+```
+React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI Responses API
+```
 
 ## Estrutura
 
-- `app/page.tsx`: composição das telas (visão geral, domínios, central de alertas) e estado da aplicação.
-- `app/globals.css`: design system — tokens de cor (marca, azul de inteligência, neutros, status), tipografia, raios, sombras e utilitários (`surface`, `num`, `eyebrow`, `ink-gradient`).
-- `lib/indicators.ts`: cálculo de situação, projeção e análise demonstrativa (regras de negócio).
-- `lib/presentation.ts`: helpers exclusivamente de apresentação (rótulos, ordenação por severidade, textos de contexto, série do gráfico, perguntas sugeridas e estruturação da resposta do assistente). Não altera regras nem dados.
-- `components/governance/`: componentes reutilizáveis da plataforma.
-  - `status-badge.tsx` (situação com ícone + texto), `kpi-card.tsx`, `panel.tsx`, `status-filter.tsx`, `sparkline.tsx`, `sinval-mark.tsx`.
-  - `action-now.tsx` (exige ação agora), `priorities.tsx` (ações recomendadas), `domain-cards.tsx`, `trend-chart.tsx` (histórico × cenário).
-  - `indicator-table.tsx` (tabela + cards mobile), `alert-list.tsx` (alertas acionáveis), `indicator-detail.tsx` (análise executiva), `sinval-chat.tsx` (assistente com respostas estruturadas), `app-sidebar.tsx`.
-- `backend/indicators.json`: base única de nove indicadores fictícios.
-- `app/api/*`: demonstração e proxy de servidor para o Go.
-- `backend/`: serviço Go independente, Dockerfile e instruções de integração com IA.
+- `app/page.tsx`: telas (Governança, visão geral, domínios, central de alertas) e estado.
+- `app/globals.css`: design system.
+- `lib/indicators.ts`: regras de negócio dos indicadores.
+- `lib/presentation.ts`: apresentação (rótulos, ordenação, textos, gráfico).
+- `lib/agents.ts`: catálogo dos quatro bots no frontend.
+- `components/governance/`: painel, filtros, tabela, chat, sidebar.
+- `backend/internal/ai/`: cliente OpenAI, roteamento, prompts e serviço.
+- `backend/indicators.json`: nove indicadores fictícios.
+- `app/api/chat`, `app/api/indicators`, `app/api/agents`: proxy de servidor para o Go.
 
-### Direção visual
+## Agentes
 
-Workspace executivo de governança e IA: superfícies claras, laranja reservado a CTAs e destaques, azul profundo para a área de inteligência (Seu Sinval), neutros frios no restante. Situação sempre comunicada por ícone + texto, não apenas por cor. Projeções aparecem como "cenário ilustrativo" e os dados como fictícios em todas as superfícies.
+| Bot | Papel |
+| --- | --- |
+| Seu Sinval | Coordenador geral |
+| Aurora | Risco de IA |
+| Octave | Proteção de dados |
+| Sherlock | Privacidade de dados |
 
-O frontend publicado funciona sem credenciais, em modo demonstrativo. O backend Go foi escrito, mas não compilado neste ambiente (Go indisponível) nem hospedado. A integração real com o modelo requer configuração de endpoint e credenciais no Go. Veja `backend/README.md`.
+## Variáveis
+
+Backend Go: `API_TOKEN`, `OPENAI_API_KEY`, `OPENAI_MODEL` (opcional, padrão `gpt-4.1-mini`), `PORT`.
+
+Frontend Vercel: `GO_API_URL`, `GO_API_TOKEN`. Nunca coloque a chave da OpenAI no Vercel.
+
+Detalhes em `backend/README.md`.
+
+## Execução local
+
+Frontend:
+
+```powershell
+npm install
+npx next dev
+```
+
+Backend (outra janela):
+
+```powershell
+cd backend
+$env:API_TOKEN="um-segredo-com-pelo-menos-24-chars"
+$env:OPENAI_API_KEY="sk-..."
+go test ./...
+go run .
+```
+
+## Deploy
+
+1. Publique o Go em um host HTTPS com `API_TOKEN` e `OPENAI_API_KEY`.
+2. No Vercel, defina `GO_API_URL` e `GO_API_TOKEN`.
+3. `npx vercel --prod` ou push em `main`.
+
+O site em [seusinval.vercel.app](https://seusinval.vercel.app) continua no ar sem o Go (painel demonstrativo). O chat só responde com IA depois que o backend estiver publicado.
 
 ## Escopo e metodologia
 
-Referência fixa: agosto de 2026. Para indicadores percentuais, maior é melhor. Meta atingida: na meta; déficit de até 10 pontos percentuais: atenção; déficit superior: crítico. Incidentes acima de zero: crítico. São critérios fictícios internos, sem pretensão de certificar conformidade regulatória.
+Referência: agosto de 2026. Percentuais: maior é melhor. Meta atingida = na meta; déficit até 10 p.p. = atenção; acima disso ou qualquer incidente = crítico. Projeção de setembro: agosto + (agosto − junho)/2, limitada a 0–100%. Cenário ilustrativo, sem validação preditiva. Dados e metas são fictícios.
 
-O gráfico compara médias simples dos indicadores percentuais de cada domínio; a contagem de incidentes fica fora dessa média. A projeção de setembro usa agosto + (agosto − junho)/2, limitada ao intervalo 0–100% para percentuais. Não é um modelo preditivo validado.
+## Interações revisadas
 
-Os filtros, a seleção de domínio e o histórico da conversa duram a sessão React; não há persistência, autenticação corporativa, integração de dados nem envio de alertas externos. A publicação é privada, sob acesso do proprietário no Sites.
+| Elemento | Ação |
+| --- | --- |
+| Menu / marca **Governança** | Abre a visão Governança de dados e IA |
+| Visão geral, Privacidade, Proteção, Riscos de IA, Central de alertas | Navegam e marcam o item ativo |
+| Breadcrumb `Governança > …` | Volta à visão Governança |
+| Filtros de situação | Atualizam tabela e alertas; **Limpar filtro** restaura Todos |
+| Cards de domínio | Abrem o domínio |
+| KPIs com CTA | Filtram ou abrem a central de alertas; KPIs sem ação não parecem clicáveis |
+| Linhas da tabela, alertas, prioridades | Abrem o detalhe do indicador |
+| Gráfico | Alterna histórico/cenário e mostra/oculta domínios |
+| Chat | Quatro bots, streaming, histórico da sessão, limpar conversa, falha amigável |
 
 ## Verificação
 
-Build de produção validado. O `tsc --noEmit` isolado encontra declarações de tipos Cloudflare ausentes no starter (`cloudflare:workers`, `Fetcher`, `D1Database`); o pipeline do Sites conclui o build. Não foi realizada inspeção de navegador. Compile e valide o serviço Go em CI antes de uso.
+```powershell
+npx next build
+cd backend
+go test ./...
+```
+
+Testes automatizados cobrem menu Governança, domínios, filtros, breadcrumbs, abertura do chat, troca de bots e proxy sem chave no frontend.
