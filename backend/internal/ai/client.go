@@ -5,15 +5,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 )
 
-const defaultEndpoint = "https://api.openai.com/v1/responses"
+const defaultEndpoint = "https://api.openai.com/v1/chat/completions"
+const defaultModel = "gpt-4o-mini"
 
 type Client struct {
 	APIKey   string
@@ -23,8 +23,10 @@ type Client struct {
 }
 
 func NewClient(apiKey, model string) *Client {
+	apiKey = sanitizeSecret(apiKey)
+	model = sanitizeSecret(model)
 	if model == "" {
-		model = "gpt-4.1-mini"
+		model = defaultModel
 	}
 	return &Client{
 		APIKey:   apiKey,
@@ -38,23 +40,31 @@ func (c *Client) Ready() bool {
 	return c != nil && c.APIKey != "" && c.Model != ""
 }
 
-type responsesPayload struct {
-	Model        string  `json:"model"`
-	Instructions string  `json:"instructions,omitempty"`
-	Input        []Turn  `json:"input"`
-	Temperature  float64 `json:"temperature"`
-	MaxOutput    int     `json:"max_output_tokens"`
-	Stream       bool    `json:"stream,omitempty"`
+type chatPayload struct {
+	Model       string        `json:"model"`
+	Messages    []chatMessage `json:"messages"`
+	Temperature float64       `json:"temperature"`
+	MaxTokens   int           `json:"max_tokens"`
+	Stream      bool          `json:"stream,omitempty"`
 }
 
-type responsesBody struct {
-	Output []struct {
-		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"content"`
-	} `json:"output"`
-	OutputText string `json:"output_text"`
+type chatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type chatBody struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+	} `json:"choices"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 func (c *Client) Complete(ctx context.Context, req CompletionRequest) (string, error) {
@@ -63,14 +73,20 @@ func (c *Client) Complete(ctx context.Context, req CompletionRequest) (string, e
 		return "", err
 	}
 	defer body.Close()
-	limited := io.LimitReader(body, 1<<20)
-	var parsed responsesBody
-	if err := json.NewDecoder(limited).Decode(&parsed); err != nil {
-		return "", errors.New("resposta inválida do modelo")
+	raw, err := io.ReadAll(io.LimitReader(body, 1<<20))
+	if err != nil {
+		return "", ErrUnavailable
 	}
-	text := extractText(parsed)
+	var parsed chatBody
+	if json.Unmarshal(raw, &parsed) != nil {
+		return "", ErrUnavailable
+	}
+	if parsed.Error != nil && parsed.Error.Message != "" {
+		return "", mapOpenAIError(0, []byte(parsed.Error.Message))
+	}
+	text := extractChatText(parsed)
 	if text == "" {
-		return "", errors.New("resposta vazia do modelo")
+		return "", ErrUnavailable
 	}
 	return text, nil
 }
@@ -101,88 +117,49 @@ func (c *Client) CompleteStream(ctx context.Context, req CompletionRequest, emit
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		if emitted {
+			return nil
+		}
+		return ErrUnavailable
 	}
 	if !emitted {
-		return errors.New("resposta vazia do modelo")
+		return ErrUnavailable
 	}
 	return nil
 }
 
 func streamDeltas(data string) []string {
-	var ev map[string]json.RawMessage
-	if json.Unmarshal([]byte(data), &ev) != nil {
+	var ev chatBody
+	if json.Unmarshal([]byte(data), &ev) != nil || len(ev.Choices) == 0 {
 		return nil
 	}
-	typ := jsonString(ev["type"])
-	switch typ {
-	case "response.output_text.delta", "response.content_part.delta", "response.function_call_arguments.delta":
-		if text := jsonStringValue(ev["delta"]); text != "" {
-			return []string{text}
-		}
-		if text := jsonStringValue(ev["text"]); text != "" {
-			return []string{text}
-		}
-	case "response.completed":
-		if text := completedText(ev["response"]); text != "" {
-			return []string{text}
-		}
+	if text := ev.Choices[0].Delta.Content; text != "" {
+		return []string{text}
+	}
+	if text := ev.Choices[0].Message.Content; text != "" {
+		return []string{text}
 	}
 	return nil
 }
 
-func jsonString(raw json.RawMessage) string {
-	var s string
-	if json.Unmarshal(raw, &s) == nil {
-		return s
-	}
-	return ""
-}
-
-func jsonStringValue(raw json.RawMessage) string {
-	if text := jsonString(raw); text != "" {
-		return text
-	}
-	var obj struct {
-		Text  string `json:"text"`
-		Delta string `json:"delta"`
-	}
-	if json.Unmarshal(raw, &obj) == nil {
-		if obj.Text != "" {
-			return obj.Text
-		}
-		return obj.Delta
-	}
-	return ""
-}
-
-func completedText(raw json.RawMessage) string {
-	var parsed responsesBody
-	if json.Unmarshal(raw, &parsed) != nil {
-		return ""
-	}
-	return extractText(parsed)
-}
-
 func (c *Client) do(ctx context.Context, req CompletionRequest, stream bool) (io.ReadCloser, error) {
 	if !c.Ready() {
-		return nil, errors.New("modelo de IA não configurado")
+		return nil, ErrNotConfigured
 	}
-	payload := responsesPayload{
-		Model:        c.Model,
-		Instructions: req.Instructions,
-		Input:        req.Input,
-		Temperature:  0.4,
-		MaxOutput:    2200,
-		Stream:       stream,
+	payload := chatPayload{
+		Model:       c.Model,
+		Messages:    toMessages(req),
+		Temperature: 0.4,
+		MaxTokens:   2200,
+		Stream:      stream,
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		return nil, errors.New("falha ao preparar a solicitação")
+		return nil, ErrUnavailable
 	}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Endpoint, bytes.NewReader(raw))
 	if err != nil {
-		return nil, errors.New("configuração inválida")
+		return nil, ErrUnavailable
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.APIKey)
@@ -191,27 +168,75 @@ func (c *Client) do(ctx context.Context, req CompletionRequest, stream bool) (io
 	}
 	res, err := c.HTTP.Do(httpReq)
 	if err != nil {
-		return nil, errors.New("modelo de IA indisponível")
+		return nil, ErrUnavailable
 	}
 	if res.StatusCode != http.StatusOK {
-		io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
+		limited, _ := io.ReadAll(io.LimitReader(res.Body, 2048))
 		res.Body.Close()
-		return nil, fmt.Errorf("falha ao consultar modelo de IA")
+		log.Printf("openai status=%d model=%s", res.StatusCode, c.Model)
+		return nil, mapOpenAIError(res.StatusCode, limited)
 	}
 	return res.Body, nil
 }
 
-func extractText(parsed responsesBody) string {
-	if parsed.OutputText != "" {
-		return strings.TrimSpace(parsed.OutputText)
+func toMessages(req CompletionRequest) []chatMessage {
+	msgs := make([]chatMessage, 0, len(req.Input)+1)
+	if strings.TrimSpace(req.Instructions) != "" {
+		msgs = append(msgs, chatMessage{Role: "system", Content: req.Instructions})
 	}
-	var b strings.Builder
-	for _, item := range parsed.Output {
-		for _, c := range item.Content {
-			if c.Type == "output_text" || c.Type == "text" {
-				b.WriteString(c.Text)
-			}
+	for _, t := range req.Input {
+		role := t.Role
+		if role != "user" && role != "assistant" && role != "system" {
+			role = "user"
 		}
+		msgs = append(msgs, chatMessage{Role: role, Content: t.Content})
+	}
+	return msgs
+}
+
+func extractChatText(parsed chatBody) string {
+	var b strings.Builder
+	for _, choice := range parsed.Choices {
+		if choice.Message.Content != "" {
+			b.WriteString(choice.Message.Content)
+			continue
+		}
+		b.WriteString(choice.Delta.Content)
 	}
 	return strings.TrimSpace(b.String())
+}
+
+func mapOpenAIError(status int, body []byte) error {
+	msg := strings.ToLower(string(body))
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return ErrAuth
+	case http.StatusTooManyRequests:
+		return ErrQuota
+	case http.StatusNotFound:
+		return ErrModel
+	case http.StatusBadRequest:
+		if strings.Contains(msg, "model") {
+			return ErrModel
+		}
+		return ErrUnavailable
+	}
+	if strings.Contains(msg, "incorrect api key") || strings.Contains(msg, "invalid_api_key") || strings.Contains(msg, "unauthorized") {
+		return ErrAuth
+	}
+	if strings.Contains(msg, "insufficient_quota") || strings.Contains(msg, "rate limit") {
+		return ErrQuota
+	}
+	if strings.Contains(msg, "model") && (strings.Contains(msg, "does not exist") || strings.Contains(msg, "not found")) {
+		return ErrModel
+	}
+	return ErrUnavailable
+}
+
+func sanitizeSecret(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.Trim(s, "\"'")
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	return strings.TrimSpace(s)
 }

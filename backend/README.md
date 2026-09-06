@@ -9,7 +9,7 @@ internal/ai
   types.go      agentes, contratos de request/response
   prompts.go    prompts versionados (2026-04)
   router.go     roteamento inteligente
-  client.go     OpenAI Responses API
+  client.go     OpenAI Chat Completions API
   service.go    orquestração, evidência e histórico
   ratelimit.go  limite por IP
 ```
@@ -30,7 +30,7 @@ Se o usuário escolhe um especialista, a seleção é respeitada. Com Seu Sinval
 | `API_TOKEN` | sim | Bearer token do serviço (mínimo 24 caracteres) |
 | `PORT` | não | Porta HTTP, padrão `8080` |
 | `OPENAI_API_KEY` | para o chat | Chave da OpenAI. Nunca exponha no frontend. |
-| `OPENAI_MODEL` | não | Modelo da Responses API. Padrão `gpt-4.1-mini`. |
+| `OPENAI_MODEL` | não | Modelo da Chat Completions API. Padrão `gpt-4o-mini`. |
 
 A chave **não** deve existir em `VITE_`, `NEXT_PUBLIC_` ou no código do React. O frontend na Vercel só conhece `GO_API_URL` e `GO_API_TOKEN`.
 
@@ -41,7 +41,7 @@ Requer Go 1.22 ou superior.
 ```powershell
 $env:API_TOKEN="um-segredo-com-pelo-menos-24-chars"
 $env:OPENAI_API_KEY="sk-..."
-$env:OPENAI_MODEL="gpt-4.1-mini"
+$env:OPENAI_MODEL="gpt-4o-mini"
 go test ./...
 go run .
 ```

@@ -18,6 +18,9 @@ var (
 	ErrUnavailable    = errors.New("modelo de IA indisponível")
 	ErrNotConfigured  = errors.New("modelo de IA não configurado")
 	ErrRateLimited    = errors.New("limite de requisições atingido; tente novamente em instantes")
+	ErrAuth           = errors.New("chave da OpenAI inválida ou sem permissão")
+	ErrQuota          = errors.New("cota ou limite da OpenAI esgotado")
+	ErrModel          = errors.New("modelo da OpenAI indisponível nesta conta")
 )
 
 type IndicatorEvidence struct {
@@ -75,7 +78,7 @@ func (s *Service) Ask(ctx context.Context, req ChatRequest) (ChatResponse, error
 	}
 	completion, err := s.Completer.Complete(ctx, s.completion(req, text, agent, convID))
 	if err != nil {
-		return ChatResponse{}, ErrUnavailable
+		return ChatResponse{}, classify(err)
 	}
 	s.append(convID, text, completion)
 	return s.response(convID, agent, completion), nil
@@ -97,11 +100,17 @@ func (s *Service) AskStream(ctx context.Context, req ChatRequest, emit func(delt
 	})
 	completion := strings.TrimSpace(b.String())
 	if completion == "" {
+		if fatalOpenAI(err) {
+			return ChatResponse{}, classify(err)
+		}
 		completion, err = s.Completer.Complete(ctx, comp)
-		if err != nil || strings.TrimSpace(completion) == "" {
-			return ChatResponse{}, ErrUnavailable
+		if err != nil {
+			return ChatResponse{}, classify(err)
 		}
 		completion = strings.TrimSpace(completion)
+		if completion == "" {
+			return ChatResponse{}, ErrUnavailable
+		}
 		_ = emit(completion)
 	}
 	s.append(convID, text, completion)
@@ -234,6 +243,20 @@ func filterEvidence(rows []IndicatorEvidence, domain, indicatorID string) []Indi
 		return rows
 	}
 	return out
+}
+
+func classify(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, ErrAuth) || errors.Is(err, ErrQuota) || errors.Is(err, ErrModel) || errors.Is(err, ErrNotConfigured) || errors.Is(err, ErrInvalidMessage) || errors.Is(err, ErrRateLimited) || errors.Is(err, ErrUnavailable) {
+		return err
+	}
+	return ErrUnavailable
+}
+
+func fatalOpenAI(err error) bool {
+	return errors.Is(err, ErrAuth) || errors.Is(err, ErrQuota) || errors.Is(err, ErrModel) || errors.Is(err, ErrNotConfigured)
 }
 
 func empty(s string) string {

@@ -101,3 +101,20 @@ func TestAskStreamFallsBackWhenEmpty(t *testing.T) {
 		t.Fatalf("message=%q streamed=%q", res.Message, got)
 	}
 }
+
+type authFailCompleter struct{}
+
+func (authFailCompleter) Complete(context.Context, CompletionRequest) (string, error) {
+	return "", ErrAuth
+}
+func (authFailCompleter) CompleteStream(context.Context, CompletionRequest, func(string) error) error {
+	return ErrAuth
+}
+
+func TestAskStreamSurfacesAuth(t *testing.T) {
+	svc := NewService(authFailCompleter{}, nil)
+	_, err := svc.AskStream(context.Background(), ChatRequest{Message: "Quais indicadores precisam de atenção?"}, func(string) error { return nil })
+	if err != ErrAuth {
+		t.Fatalf("got %v", err)
+	}
+}

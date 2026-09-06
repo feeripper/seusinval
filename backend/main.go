@@ -188,11 +188,12 @@ func (a *App) streamChat(w http.ResponseWriter, r *http.Request, req ai.ChatRequ
 
 func writeAIError(w http.ResponseWriter, err error) {
 	code := 502
-	if err == ai.ErrInvalidMessage {
+	switch err {
+	case ai.ErrInvalidMessage:
 		code = 400
-	} else if err == ai.ErrRateLimited {
+	case ai.ErrRateLimited, ai.ErrQuota:
 		code = 429
-	} else if err == ai.ErrNotConfigured {
+	case ai.ErrNotConfigured, ai.ErrAuth, ai.ErrModel:
 		code = 503
 	}
 	reply(w, code, map[string]string{"error": publicError(err)})
@@ -200,9 +201,7 @@ func writeAIError(w http.ResponseWriter, err error) {
 
 func publicError(err error) string {
 	switch err {
-	case ai.ErrInvalidMessage:
-		return err.Error()
-	case ai.ErrRateLimited:
+	case ai.ErrInvalidMessage, ai.ErrRateLimited, ai.ErrAuth, ai.ErrQuota, ai.ErrModel:
 		return err.Error()
 	case ai.ErrNotConfigured:
 		return "Assistente indisponível. O motor de IA não está configurado no backend."
@@ -256,12 +255,13 @@ func main() {
 	if json.Unmarshal(seed, &rows) != nil {
 		log.Fatal("Base inválida")
 	}
-	key := os.Getenv("OPENAI_API_KEY")
-	model := os.Getenv("OPENAI_MODEL")
+	key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
 	var svc *ai.Service
 	if key != "" {
-		svc = ai.NewService(ai.NewClient(key, model), evidenceFrom(rows))
-		log.Print("Motor de IA configurado")
+		client := ai.NewClient(key, model)
+		svc = ai.NewService(client, evidenceFrom(rows))
+		log.Printf("Motor de IA configurado model=%s key_len=%d", client.Model, len(client.APIKey))
 	} else {
 		log.Print("OPENAI_API_KEY ausente; chat permanecerá indisponível")
 	}

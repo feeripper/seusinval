@@ -5,11 +5,11 @@ Protótipo React com identidade visual inspirada no Itaú Unibanco, indicadores 
 ## Arquitetura
 
 - Frontend Next.js na Vercel: painel, rotas `/api/*` como proxy.
-- Backend Go separado: indicadores, agentes e motor OpenAI (Responses API).
+- Backend Go separado: indicadores, agentes e motor OpenAI (Chat Completions).
 - Sem `OPENAI_API_KEY` no browser. Sem `VITE_` / `NEXT_PUBLIC_` para a chave.
 
 ```
-React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI Responses API
+React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI Chat Completions
 ```
 
 ## Estrutura
@@ -35,7 +35,7 @@ React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI 
 
 ## Variáveis
 
-Backend Go: `API_TOKEN`, `OPENAI_API_KEY`, `OPENAI_MODEL` (opcional, padrão `gpt-4.1-mini`), `PORT`.
+Backend Go: `API_TOKEN`, `OPENAI_API_KEY`, `OPENAI_MODEL` (opcional, padrão `gpt-4o-mini`), `PORT`.
 
 Frontend Vercel: `GO_API_URL`, `GO_API_TOKEN`. Nunca coloque a chave da OpenAI no Vercel.
 
