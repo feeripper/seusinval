@@ -77,3 +77,27 @@ func TestAskRejectsEmpty(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+type emptyStreamCompleter struct{ out string }
+
+func (e emptyStreamCompleter) Complete(_ context.Context, _ CompletionRequest) (string, error) {
+	return e.out, nil
+}
+func (e emptyStreamCompleter) CompleteStream(_ context.Context, _ CompletionRequest, _ func(string) error) error {
+	return nil
+}
+
+func TestAskStreamFallsBackWhenEmpty(t *testing.T) {
+	svc := NewService(emptyStreamCompleter{out: "Análise completa da Aurora."}, nil)
+	var got string
+	res, err := svc.AskStream(context.Background(), ChatRequest{Message: "Quais indicadores precisam de atenção?"}, func(delta string) error {
+		got += delta
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Message != "Análise completa da Aurora." || got != res.Message {
+		t.Fatalf("message=%q streamed=%q", res.Message, got)
+	}
+}

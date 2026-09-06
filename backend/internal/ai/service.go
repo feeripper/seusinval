@@ -89,15 +89,21 @@ func (s *Service) AskStream(ctx context.Context, req ChatRequest, emit func(delt
 	if !s.Ready() {
 		return ChatResponse{}, ErrNotConfigured
 	}
+	comp := s.completion(req, text, agent, convID)
 	var b strings.Builder
-	err = s.Completer.CompleteStream(ctx, s.completion(req, text, agent, convID), func(delta string) error {
+	err = s.Completer.CompleteStream(ctx, comp, func(delta string) error {
 		b.WriteString(delta)
 		return emit(delta)
 	})
-	if err != nil {
-		return ChatResponse{}, ErrUnavailable
+	completion := strings.TrimSpace(b.String())
+	if completion == "" {
+		completion, err = s.Completer.Complete(ctx, comp)
+		if err != nil || strings.TrimSpace(completion) == "" {
+			return ChatResponse{}, ErrUnavailable
+		}
+		completion = strings.TrimSpace(completion)
+		_ = emit(completion)
 	}
-	completion := b.String()
 	s.append(convID, text, completion)
 	return s.response(convID, agent, completion), nil
 }

@@ -112,8 +112,11 @@ export default function Page() {
             if (done.agent?.id) setAgentId(done.agent.id as AgentId);
             setMessages(m => {
               const last = m[m.length - 1];
-              const text = done.message || last?.text || '';
-              const next: Message = { role: 'assistant', text, agentId: (done.agent?.id as AgentId) || streamAgent, actions: done.suggestedActions };
+              const streamed = last?.role === 'assistant' && last.streaming ? last.text : '';
+              const text = (done.message || streamed).trim();
+              if (!text) return last?.role === 'assistant' && last.streaming ? m.slice(0, -1) : m;
+              const actions = (done.suggestedActions ?? []).filter(a => questionFromAction(a) !== q);
+              const next: Message = { role: 'assistant', text, agentId: (done.agent?.id as AgentId) || streamAgent, actions };
               if (last?.role === 'assistant') return [...m.slice(0, -1), next];
               return [...m, next];
             });
@@ -317,7 +320,8 @@ async function readChatStream(body: ReadableStream<Uint8Array>, handlers: {
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
-    for (const line of lines) {
+    for (const raw of lines) {
+      const line = raw.replace(/\r$/, '');
       if (line.startsWith('event:')) event = line.slice(6).trim();
       else if (line.startsWith('data:')) {
         const data = line.slice(5).trim();

@@ -83,29 +83,85 @@ func (c *Client) CompleteStream(ctx context.Context, req CompletionRequest, emit
 	defer body.Close()
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 512*1024)
+	var emitted bool
 	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
+		line := strings.TrimSpace(scanner.Text())
+		if !strings.HasPrefix(line, "data:") {
 			continue
 		}
-		data := strings.TrimPrefix(line, "data: ")
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 		if data == "[DONE]" {
-			return nil
+			break
 		}
-		var ev struct {
-			Type  string `json:"type"`
-			Delta string `json:"delta"`
-		}
-		if json.Unmarshal([]byte(data), &ev) != nil {
-			continue
-		}
-		if ev.Type == "response.output_text.delta" && ev.Delta != "" {
-			if err := emit(ev.Delta); err != nil {
+		for _, delta := range streamDeltas(data) {
+			emitted = true
+			if err := emit(delta); err != nil {
 				return err
 			}
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	if !emitted {
+		return errors.New("resposta vazia do modelo")
+	}
+	return nil
+}
+
+func streamDeltas(data string) []string {
+	var ev map[string]json.RawMessage
+	if json.Unmarshal([]byte(data), &ev) != nil {
+		return nil
+	}
+	typ := jsonString(ev["type"])
+	switch typ {
+	case "response.output_text.delta", "response.content_part.delta", "response.function_call_arguments.delta":
+		if text := jsonStringValue(ev["delta"]); text != "" {
+			return []string{text}
+		}
+		if text := jsonStringValue(ev["text"]); text != "" {
+			return []string{text}
+		}
+	case "response.completed":
+		if text := completedText(ev["response"]); text != "" {
+			return []string{text}
+		}
+	}
+	return nil
+}
+
+func jsonString(raw json.RawMessage) string {
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	return ""
+}
+
+func jsonStringValue(raw json.RawMessage) string {
+	if text := jsonString(raw); text != "" {
+		return text
+	}
+	var obj struct {
+		Text  string `json:"text"`
+		Delta string `json:"delta"`
+	}
+	if json.Unmarshal(raw, &obj) == nil {
+		if obj.Text != "" {
+			return obj.Text
+		}
+		return obj.Delta
+	}
+	return ""
+}
+
+func completedText(raw json.RawMessage) string {
+	var parsed responsesBody
+	if json.Unmarshal(raw, &parsed) != nil {
+		return ""
+	}
+	return extractText(parsed)
 }
 
 func (c *Client) do(ctx context.Context, req CompletionRequest, stream bool) (io.ReadCloser, error) {
