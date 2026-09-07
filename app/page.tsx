@@ -42,19 +42,21 @@ const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
 function readUrlState(): { domain: Domain | 'Todos'; status: Filter; q: string; initialView: View } {
   if (typeof window === 'undefined') return { domain: 'Todos', status: 'Todos', q: '', initialView: 'Governança' };
   const params = new URLSearchParams(window.location.search);
+  const pathname = window.location.pathname;
+  const isAlertasPath = pathname === '/alertas' || pathname.startsWith('/alertas/');
   const domainParam = params.get('domain');
   const statusParam = params.get('status');
   const q = params.get('q') ?? '';
   const domain = domainParam ? (DOMAIN_BY_SLUG[domainParam] as Domain | undefined) : null;
   const status = statusParam ? (STATUS_BY_SLUG[statusParam] as Filter | undefined) : null;
-  let initialView: View = 'Governança';
+  let initialView: View = isAlertasPath ? 'Central de alertas' : 'Governança';
   let resolvedDomain: Domain | 'Todos' = 'Todos';
   if (domain && status && DOMAINS.includes(domain)) {
     resolvedDomain = domain;
     initialView = 'Central de alertas';
   } else if (domain && DOMAINS.includes(domain)) {
     resolvedDomain = domain;
-    initialView = domain;
+    initialView = isAlertasPath ? 'Central de alertas' : domain;
   } else if (status) {
     initialView = 'Central de alertas';
   }
@@ -93,7 +95,8 @@ export default function Page() {
     if (filter !== 'Todos') params.set('status', STATUS_SLUGS[filter as Status]);
     if (query) params.set('q', query);
     const qs = params.toString();
-    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    const basePath = view === 'Central de alertas' ? '/alertas' : '/';
+    const url = qs ? `${basePath}?${qs}` : basePath;
     window.history.replaceState({}, '', url);
   }, [view, alertDomain, filter, query]);
 
@@ -306,12 +309,14 @@ export default function Page() {
             <SubscriptionsPanel rows={rows} onSelect={setSelected} preselectedIds={preselectedSubscriptions} />
           ) : view === 'Central de alertas' ? (
             <>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <KpiCard label="Críticos" value={critical} unit={critical ? 'ação imediata' : 'nenhum'} context="Desvio acima de 10 p.p. ou incidente" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Filtrar críticos' : undefined} onCta={() => setFilter('Crítico')} />
-                <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Até 10 p.p. da meta" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Filtrar atenção' : undefined} onCta={() => setFilter('Atenção')} />
-                <KpiCard label="Na meta" value={healthy} unit={`de ${scope.length}`} context="Sem alerta aberto" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
-              </div>
-              <AlertList scope={scope} filter={filter} onFilter={setFilter} onSelect={setSelected} onAsk={ask} onResetFilters={() => navigate('Governança')} />
+              {filter === 'Todos' && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <KpiCard label="Críticos" value={critical} unit={critical ? 'ação imediata' : 'nenhum'} context="Desvio acima de 10 p.p. ou incidente" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Filtrar críticos' : undefined} onCta={() => setFilter('Crítico')} />
+                  <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Até 10 p.p. da meta" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Filtrar atenção' : undefined} onCta={() => setFilter('Atenção')} />
+                  <KpiCard label="Na meta" value={healthy} unit={`de ${scope.length}`} context="Sem alerta aberto" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
+                </div>
+              )}
+              <AlertList scope={scope} filter={filter} onFilter={setFilter} onSelect={setSelected} onAsk={ask} onResetFilters={() => navigate('Central de alertas', { domain: activeDomain })} />
             </>
           ) : (
             <>
