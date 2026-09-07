@@ -97,15 +97,15 @@ export function FloatingChat({
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex h-12 items-center gap-2 rounded-full border border-n-200 bg-n-0 py-1 pr-4 pl-1 shadow-[var(--shadow-3)]"
+          className="inline-flex h-12 items-center gap-2 rounded-full border bg-card py-1 pr-4 pl-1 shadow-[var(--shadow-3)]"
           aria-label={`Restaurar conversa com ${agent.name}`}
         >
           <span className="relative">
             <AgentAvatar agent={agent} size={40} alt="" />
             <AvailabilityDot available />
           </span>
-          <span className="text-[13px] font-semibold text-n-900">{agent.name}</span>
-          <Maximize2 size={14} className="text-n-500" aria-hidden />
+          <span className="text-[13px] font-semibold text-foreground">{agent.name}</span>
+          <Maximize2 size={14} className="text-muted-foreground" aria-hidden />
         </button>
       </div>
     );
@@ -114,7 +114,7 @@ export function FloatingChat({
   return (
     <section
       aria-label={`Chat com ${agent.name}`}
-      className="fixed right-3 bottom-3 z-40 flex w-[min(100%-1.5rem,400px)] max-h-[min(720px,calc(100dvh-5.5rem))] flex-col overflow-hidden rounded-2xl border border-n-200 bg-n-0 shadow-[var(--shadow-3)] sm:right-6 sm:bottom-6"
+      className="chat-panel fixed inset-x-3 bottom-3 z-40 flex h-[min(640px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-3)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[min(460px,calc(100vw-1.5rem))] sm:max-w-[480px]"
     >
       <header className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: agent.accent }}>
         <span className="relative">

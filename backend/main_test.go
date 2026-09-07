@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"sinval/backend/internal/ai"
+	"sinval/backend/internal/subscriptions"
 )
 
 type stubCompleter struct{ out string }
@@ -25,7 +26,10 @@ func (s stubCompleter) CompleteStream(_ context.Context, _ ai.CompletionRequest,
 func testApp() *App {
 	rows := []Indicator{{ID: "IA-001", Name: "Modelos de IA avaliados", Domain: "Riscos de IA", Value: 76, Target: 95, Unit: "%", Direction: "up", Owner: "Governança de IA", Source: "Inventário", Action: "Avaliar pendências", History: []float64{70, 71, 72, 72, 74, 76}}}
 	svc := ai.NewService(stubCompleter{out: "Risco identificado na evidência fictícia."}, evidenceFrom(rows))
-	return &App{Rows: rows, Token: "abcdefghijklmnopqrstuvwx", AI: svc, Limit: ai.NewLimiter(20, time.Minute)}
+	repo := subscriptions.NewInMemoryRepo()
+	subSvc := subscriptions.NewService(repo, &subscriptions.MockSender{}, "")
+	subSvc.ResolveUser("demo", "usuario@seusinval.local")
+	return &App{Rows: rows, Token: "abcdefghijklmnopqrstuvwx", AI: svc, Limit: ai.NewLimiter(20, time.Minute), Subscriptions: subSvc}
 }
 
 func TestChatRejectsInvalidJSON(t *testing.T) {
@@ -89,6 +93,54 @@ func TestAgentsEndpoint(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"id":"sinval"`) {
 		t.Fatalf("body=%s", rec.Body.String())
+	}
+}
+
+func TestSubscriptionsCRUD(t *testing.T) {
+	app := testApp()
+
+	body, _ := json.Marshal(map[string]any{"indicatorId": "IA-001", "indicatorName": "Modelos de IA avaliados", "email": "teste@example.com", "events": []string{"data_update"}, "frequency": "immediate"})
+	req := httptest.NewRequest(http.MethodPost, "/api/subscriptions", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer abcdefghijklmnopqrstuvwx")
+	rec := httptest.NewRecorder()
+	app.handler().ServeHTTP(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("create code=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var sub struct{ ID string }
+	if err := json.Unmarshal(rec.Body.Bytes(), &sub); err != nil {
+		t.Fatal(err)
+	}
+	if sub.ID == "" {
+		t.Fatal("missing subscription id")
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/subscriptions", nil)
+	req.Header.Set("Authorization", "Bearer abcdefghijklmnopqrstuvwx")
+	rec = httptest.NewRecorder()
+	app.handler().ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("list code=%d", rec.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/notifications/simulate", bytes.NewReader([]byte(`{"indicatorId":"IA-001","indicatorName":"Modelos de IA avaliados","eventType":"data_update","newValue":"78%"}`)))
+	req.Header.Set("Authorization", "Bearer abcdefghijklmnopqrstuvwx")
+	rec = httptest.NewRecorder()
+	app.handler().ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("simulate code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"notified":true`) {
+		t.Fatalf("simulation did not notify: %s", rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/subscriptions/"+sub.ID+"/pause", nil)
+	req.Header.Set("Authorization", "Bearer abcdefghijklmnopqrstuvwx")
+	rec = httptest.NewRecorder()
+	app.handler().ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("pause code=%d", rec.Code)
 	}
 }
 

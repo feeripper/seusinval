@@ -109,6 +109,24 @@
   --sidebar-border: var(--n-200);
   --sidebar-ring: var(--brand-500);
 
+  /* Tokens semânticos */
+  --surface: var(--n-0);
+  --surface-foreground: var(--n-900);
+  --surface-hover: var(--n-50);
+  --surface-selected: var(--n-100);
+  --surface-selected-foreground: var(--n-900);
+  --text-primary: var(--n-900);
+  --text-secondary: var(--n-700);
+  --text-muted: var(--n-500);
+  --text-on-brand: #ffffff;
+  --text-inverse: var(--n-0);
+  --border-default: var(--n-200);
+  --focus-ring: var(--brand-500);
+  --info: var(--ink-600);
+  --success: var(--ok-600);
+  --warning: var(--warn-600);
+  --danger: var(--crit-600);
+
   /* Elevação */
   --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
   --shadow-2: 0 4px 12px -2px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.04);
@@ -140,11 +158,14 @@ html.dark {
   --ink-50: #10233d;
   --ink-100: #163052;
   --ok-100: #143526;
-  --ok-200: #1b4a34;
+  --ok-200: #3f8c66;
+  --ok-600: #4ade80;
   --warn-100: #3a2d10;
-  --warn-200: #534116;
+  --warn-200: #8a6b00;
+  --warn-600: #facc15;
   --crit-100: #3a1614;
-  --crit-200: #54211d;
+  --crit-200: #8c3b35;
+  --crit-600: #f87171;
   --background: #0b1118;
   --foreground: #f3f5f8;
   --card: #121a26;
@@ -164,6 +185,25 @@ html.dark {
   --sidebar-accent: #1a2433;
   --sidebar-accent-foreground: #f3f5f8;
   --sidebar-border: #273344;
+
+  /* Tokens semânticos — dark */
+  --surface: #121a26;
+  --surface-foreground: #f3f5f8;
+  --surface-hover: #1a2433;
+  --surface-selected: #163052;
+  --surface-selected-foreground: #f7f8fa;
+  --text-primary: #f7f8fa;
+  --text-secondary: #eef1f5;
+  --text-muted: #a3abb7;
+  --text-on-brand: #ffffff;
+  --text-inverse: #141b26;
+  --border-default: #273344;
+  --focus-ring: var(--brand-500);
+  --info: #4a90d9;
+  --success: #3abd82;
+  --warning: #f0c24a;
+  --danger: #e85c55;
+
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-3: 0 18px 40px rgba(0, 0, 0, 0.45);
@@ -315,8 +355,8 @@ svg {
 }
 
 @utility surface {
-  background: var(--n-0);
-  border: 1px solid var(--n-200);
+  background: var(--surface);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-1);
 }
@@ -325,9 +365,15 @@ svg {
   transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
 
   &:hover {
-    border-color: var(--n-300);
+    border-color: var(--border-default);
     box-shadow: var(--shadow-2);
+    background: var(--surface-hover);
   }
+}
+
+@utility surface-selected {
+  background: var(--surface-selected);
+  color: var(--surface-selected-foreground);
 }
 
 @utility eyebrow {
@@ -335,11 +381,75 @@ svg {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--n-500);
+  color: var(--text-muted);
 }
 
 @utility ink-gradient {
   background: linear-gradient(150deg, var(--ink-900) 0%, var(--ink-800) 55%, var(--ink-700) 100%);
+}
+
+@utility ui-text-primary {
+  color: var(--text-primary);
+}
+
+@utility ui-text-secondary {
+  color: var(--text-secondary);
+}
+
+@utility ui-text-muted {
+  color: var(--text-muted);
+}
+
+@utility ui-text-on-brand {
+  color: var(--text-on-brand);
+}
+
+@utility ui-bg-inverse {
+  background: var(--n-800);
+}
+
+@utility ui-text-inverse {
+  color: var(--text-inverse);
+}
+
+@utility ui-success {
+  color: var(--success);
+}
+
+@utility ui-warning {
+  color: var(--warning);
+}
+
+@utility ui-danger {
+  color: var(--danger);
+}
+
+@utility ui-info {
+  color: var(--info);
+}
+
+@utility ui-border {
+  border-color: var(--border-default);
+}
+
+@utility ui-focus-ring {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.chat-panel {
+  animation: chat-panel-pop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chat-panel-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Recharts: remover foco/borda padrão e suavizar */

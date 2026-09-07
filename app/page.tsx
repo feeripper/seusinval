@@ -19,6 +19,7 @@ import { IndicatorDetail } from '@/components/governance/indicator-detail';
 import { IndicatorTable } from '@/components/governance/indicator-table';
 import { KpiCard } from '@/components/governance/kpi-card';
 import { Priorities } from '@/components/governance/priorities';
+import { SubscriptionsPanel } from '@/components/governance/subscriptions-panel';
 import { Message } from '@/components/governance/sinval-chat';
 import { Filter } from '@/components/governance/status-filter';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -35,6 +36,7 @@ const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
   'Riscos de IA': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Riscos de IA'].blurb },
   'Governança de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Governança de dados'].blurb },
   'Central de alertas': { eyebrow: 'Acompanhamento', subtitle: 'Desvios da meta com contexto, responsável, prazo sugerido e próxima ação.' },
+  'Meus acompanhamentos': { eyebrow: 'Notificações', subtitle: 'Assine indicadores e acompanhe o histórico de notificações por e-mail.' },
 };
 
 export default function Page() {
@@ -55,6 +57,7 @@ export default function Page() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [agentId, setAgentId] = useState<AgentId>('sinval');
   const [conversationId, setConversationId] = useState('');
+  const [preselectedSubscriptions, setPreselectedSubscriptions] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('/api/indicators')
@@ -178,6 +181,11 @@ export default function Page() {
     setChatError('');
   }
 
+  function handleSubscribe(i: Indicator) {
+    setPreselectedSubscriptions([i.id]);
+    navigate('Meus acompanhamentos');
+  }
+
   const copy = VIEW_COPY[view];
 
   return (
@@ -236,7 +244,9 @@ export default function Page() {
             </div>
           )}
 
-          {loading ? <DashboardSkeleton /> : view === 'Central de alertas' ? (
+          {loading ? <DashboardSkeleton /> : view === 'Meus acompanhamentos' ? (
+            <SubscriptionsPanel rows={rows} onSelect={setSelected} preselectedIds={preselectedSubscriptions} />
+          ) : view === 'Central de alertas' ? (
             <>
               <div className="grid gap-4 sm:grid-cols-3">
                 <KpiCard label="Críticos" value={critical} unit={critical ? 'ação imediata' : 'nenhum'} context="Desvio acima de 10 p.p. ou incidente" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Filtrar críticos' : undefined} onCta={() => setFilter('Crítico')} />
@@ -284,6 +294,7 @@ export default function Page() {
                 filter={filter}
                 onFilter={setFilter}
                 onSelect={setSelected}
+                onSubscribe={handleSubscribe}
                 title={isDomain ? `Indicadores de ${view}` : 'Panorama dos indicadores'}
                 description="Resultado, meta, histórico mensal e situação em um só lugar."
                 query={query}
@@ -299,7 +310,7 @@ export default function Page() {
         </div>
       </SidebarInset>
 
-      <IndicatorDetail indicator={selected} onClose={() => setSelected(null)} onAsk={ask} />
+      <IndicatorDetail indicator={selected} onClose={() => setSelected(null)} onAsk={ask} onSubscribe={handleSubscribe} />
       <FloatingChat
         open={chat}
         minimized={chatMin}

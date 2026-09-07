@@ -18,6 +18,7 @@ import (
 
 	"sinval/backend/internal/ai"
 	"sinval/backend/internal/forecast"
+	"sinval/backend/internal/subscriptions"
 )
 
 //go:embed indicators.json
@@ -45,10 +46,11 @@ type Indicator struct {
 	Forecast    any       `json:"forecast,omitempty"`
 }
 type App struct {
-	Rows  []Indicator
-	Token string
-	AI    *ai.Service
-	Limit *ai.Limiter
+	Rows          []Indicator
+	Token         string
+	AI            *ai.Service
+	Limit         *ai.Limiter
+	Subscriptions *subscriptions.Service
 }
 
 func reply(w http.ResponseWriter, code int, data any) {
@@ -124,6 +126,7 @@ func (a *App) handler() http.Handler {
 		reply(w, 200, map[string]any{"agents": out, "disclaimer": ai.Disclaimer})
 	})
 	mux.HandleFunc("POST /api/chat", a.chat)
+	(&subscriptions.HandlerFactory{Service: a.Subscriptions}).Mount(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if r.URL.Path != "/healthz" && subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+a.Token)) != 1 {
@@ -291,7 +294,10 @@ func main() {
 	} else {
 		log.Print("OPENAI_API_KEY ausente; chat permanecerá indisponível")
 	}
-	a := &App{Rows: rows, Token: token, AI: svc, Limit: ai.NewLimiter(20, time.Minute)}
+	repo := subscriptions.NewInMemoryRepo()
+	subSvc := subscriptions.NewService(repo, &subscriptions.MockSender{}, os.Getenv("PORTAL_URL"))
+	subSvc.ResolveUser("demo", "usuario@seusinval.local")
+	a := &App{Rows: rows, Token: token, AI: svc, Limit: ai.NewLimiter(20, time.Minute), Subscriptions: subSvc}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus, Search, SearchX } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronRight, Mail, Minus, Search, SearchX } from 'lucide-react';
 import { Indicator } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAIN_META, Domain, delta, statusOf, targetLabel, unitLabel, valueLabel } from '@/lib/presentation';
@@ -25,6 +25,7 @@ export function IndicatorTable({
   filter,
   onFilter,
   onSelect,
+  onSubscribe,
   title,
   description,
   query,
@@ -35,6 +36,7 @@ export function IndicatorTable({
   filter: Filter;
   onFilter: (f: Filter) => void;
   onSelect: (i: Indicator) => void;
+  onSubscribe?: (i: Indicator) => void;
   title: string;
   description: string;
   query: string;
@@ -106,6 +108,9 @@ export function IndicatorTable({
                       <td className="px-4 py-3.5"><Sparkline indicator={i} /></td>
                       <td className="px-4 py-3.5"><StatusBadge value={s} /></td>
                       <td className="px-4 py-3.5 text-right">
+                        <button type="button" onClick={() => onSubscribe?.(i)} aria-label={`Acompanhar ${i.name} por e-mail`} className="inline-flex size-8 items-center justify-center rounded-md text-n-400 transition-colors hover:bg-n-100 hover:text-n-800">
+                          <Mail size={16} aria-hidden />
+                        </button>
                         <button type="button" onClick={() => onSelect(i)} aria-label={`Ver detalhes de ${i.name}`} className="inline-flex size-8 items-center justify-center rounded-md text-n-400 transition-colors hover:bg-n-100 hover:text-n-800">
                           <ChevronRight size={18} aria-hidden />
                         </button>

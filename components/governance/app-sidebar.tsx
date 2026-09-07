@@ -1,5 +1,5 @@
 'use client';
-import { Bell, BrainCircuit, LayoutDashboard, LockKeyhole, Scale, ShieldCheck } from 'lucide-react';
+import { Bell, BrainCircuit, LayoutDashboard, LockKeyhole, Mail, Scale, ShieldCheck } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { Indicator } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
@@ -7,7 +7,7 @@ import { DOMAINS, Domain, statusOf } from '@/lib/presentation';
 import { SinvalMark } from './sinval-mark';
 import { StatusDot } from './status-badge';
 
-export type View = 'Governança' | Domain | 'Central de alertas';
+export type View = 'Governança' | Domain | 'Central de alertas' | 'Meus acompanhamentos';
 
 const DOMAIN_ICONS: Record<Domain, React.ComponentType<{ size?: number; className?: string }>> = {
   'Privacidade de dados': ShieldCheck,
@@ -24,13 +24,13 @@ function NavButton({ active, onClick, icon: Icon, label, trailing }: { active: b
         onClick={onClick}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'h-10 gap-3 rounded-lg px-3 text-[13.5px] font-medium text-n-600 transition-colors',
-          'hover:bg-n-100 hover:text-n-900',
-          'data-[active=true]:bg-brand-50 data-[active=true]:text-brand-700 data-[active=true]:font-semibold',
+          'h-10 gap-3 rounded-lg px-3 text-[13.5px] font-medium ui-text-muted transition-colors',
+          'hover:bg-[var(--surface-hover)] hover:text-foreground',
+          'data-[active=true]:surface-selected data-[active=true]:font-semibold',
           'relative data-[active=true]:before:absolute data-[active=true]:before:inset-y-2 data-[active=true]:before:left-0 data-[active=true]:before:w-[3px] data-[active=true]:before:rounded-r data-[active=true]:before:bg-brand-500',
         )}
       >
-        <Icon size={18} className={cn('shrink-0', active ? 'text-brand-600' : 'text-n-500')} />
+        <Icon size={18} className={cn('shrink-0', active ? 'text-[var(--surface-selected-foreground)]' : 'text-n-500')} />
         <span className="truncate">{label}</span>
         {trailing && <span className="ml-auto inline-flex items-center gap-1">{trailing}</span>}
       </SidebarMenuButton>
@@ -98,8 +98,9 @@ export function AppSidebar({ view, rows, onNavigate, onOpenSinval }: { view: Vie
               onClick={() => go('Central de alertas')}
               icon={Bell}
               label="Central de alertas"
-              trailing={openCount > 0 && <span className="num inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-n-900 px-1.5 text-[11px] font-semibold text-white">{openCount}</span>}
+              trailing={openCount > 0 && <span className="num inline-flex h-5 min-w-5 items-center justify-center rounded-full ui-bg-inverse px-1.5 text-[11px] font-semibold ui-text-inverse">{openCount}</span>}
             />
+            <NavButton active={view === 'Meus acompanhamentos'} onClick={() => go('Meus acompanhamentos')} icon={Mail} label="Meus acompanhamentos" />
           </SidebarMenu>
         </SidebarGroup>
 

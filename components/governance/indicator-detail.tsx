@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDownRight, ArrowUpRight, CalendarDays, Clock, Database, Minus, MessageSquareText, UserRound } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CalendarDays, Clock, Database, Mail, Minus, MessageSquareText, UserRound } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Indicator, fmt } from '@/lib/indicators';
 import { HISTORY_MONTHS, HORIZON_MONTHS, forecastSeries } from '@/lib/forecast';
@@ -55,7 +55,7 @@ function DetailChart({ i }: { i: Indicator }) {
   );
 }
 
-export function IndicatorDetail({ indicator, onClose, onAsk }: { indicator: Indicator | null; onClose: () => void; onAsk: (q: string) => void }) {
+export function IndicatorDetail({ indicator, onClose, onAsk, onSubscribe }: { indicator: Indicator | null; onClose: () => void; onAsk: (q: string) => void; onSubscribe?: (i: Indicator) => void }) {
   const i = indicator;
   return (
     <Sheet open={!!i} onOpenChange={o => !o && onClose()}>
@@ -128,13 +128,22 @@ export function IndicatorDetail({ indicator, onClose, onAsk }: { indicator: Indi
 
                 <p className="text-[11.5px] leading-relaxed text-n-500">Critério demonstrativo: meta atingida = na meta; desvio de até 10 p.p. = atenção; acima de 10 p.p. = crítico. Qualquer incidente é crítico. Metas internas fictícias.</p>
 
-                <button
-                  type="button"
-                  onClick={() => { onAsk(`Analise o indicador ${i.id} e sua tendência futura`); onClose(); }}
-                  className="ink-gradient inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white shadow-[var(--shadow-2)] transition-opacity hover:opacity-95"
-                >
-                  <MessageSquareText size={16} aria-hidden /> Perguntar ao Seu Sinval sobre {i.id}
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => { onAsk(`Analise o indicador ${i.id} e sua tendência futura`); onClose(); }}
+                    className="ink-gradient inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white shadow-[var(--shadow-2)] transition-opacity hover:opacity-95"
+                  >
+                    <MessageSquareText size={16} aria-hidden /> Perguntar ao Seu Sinval
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { onSubscribe?.(i); onClose(); }}
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-input bg-card text-sm font-semibold text-foreground hover:bg-muted"
+                  >
+                    <Mail size={16} aria-hidden /> Acompanhar por e-mail
+                  </button>
+                </div>
               </div>
             </>
           );
