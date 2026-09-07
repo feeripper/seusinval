@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight, Clock, Database, MessageSquareText, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, Clock, Database, MessageSquareText, RotateCcw, ShieldCheck, UserRound } from 'lucide-react';
 import { Indicator } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAIN_META, Domain, sortBySeverity, statusOf, suggestedDeadline, targetLabel, valueLabel, whyText } from '@/lib/presentation';
@@ -12,12 +12,14 @@ export function AlertList({
   onFilter,
   onSelect,
   onAsk,
+  onResetFilters,
 }: {
   scope: Indicator[];
   filter: Filter;
   onFilter: (f: Filter) => void;
   onSelect: (i: Indicator) => void;
   onAsk: (q: string) => void;
+  onResetFilters?: () => void;
 }) {
   const open = sortBySeverity(scope.filter(i => statusOf(i) !== 'Na meta'));
   const rows = filter === 'Todos' ? open : open.filter(i => statusOf(i) === filter);
@@ -31,10 +33,17 @@ export function AlertList({
   return (
     <section aria-labelledby="alerts-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="alerts-title" className="text-[15px] font-semibold tracking-tight text-n-900">
-          {open.length} {open.length === 1 ? 'alerta aberto' : 'alertas abertos'}
-          <span className="ml-2 text-[13px] font-normal text-n-500">ordenados por severidade</span>
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 id="alerts-title" className="text-[15px] font-semibold tracking-tight text-n-900">
+            {open.length} {open.length === 1 ? 'alerta aberto' : 'alertas abertos'}
+            <span className="ml-2 text-[13px] font-normal text-n-500">ordenados por severidade</span>
+          </h2>
+          {onResetFilters && (
+            <button type="button" onClick={onResetFilters} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-50">
+              <RotateCcw size={11} aria-hidden /> Limpar filtros
+            </button>
+          )}
+        </div>
         <StatusFilter value={filter} onChange={onFilter} counts={counts} options={['Todos', 'Crítico', 'Atenção']} />
       </div>
 

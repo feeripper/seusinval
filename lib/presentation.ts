@@ -20,6 +20,23 @@ export const STATUS_META: Record<Status, { tone: Tone; rank: number; hint: strin
   'Na meta': { tone: 'ok', rank: 2, hint: 'Controle no patamar esperado.' },
 };
 
+export const DOMAIN_SLUGS: Record<Domain, string> = {
+  'Privacidade de dados': 'privacidade-de-dados',
+  'Proteção de dados': 'protecao-de-dados',
+  'Riscos de IA': 'riscos-de-ia',
+  'Governança de dados': 'governanca-de-dados',
+};
+
+export const DOMAIN_BY_SLUG: Record<string, Domain> = Object.fromEntries(Object.entries(DOMAIN_SLUGS).map(([k, v]) => [v, k])) as Record<string, Domain>;
+
+export const STATUS_SLUGS: Record<Status, string> = {
+  'Na meta': 'ok',
+  'Atenção': 'attention',
+  'Crítico': 'critical',
+};
+
+export const STATUS_BY_SLUG: Record<string, Status> = Object.fromEntries(Object.entries(STATUS_SLUGS).map(([k, v]) => [v, k])) as Record<string, Status>;
+
 export const PERIOD = { label: 'Agosto de 2026', short: 'Ago 2026', reference: '31 ago 2026 · fechamento mensal', previous: 'julho', next: 'setembro' };
 
 export function unitLabel(i: Indicator, n: number) {

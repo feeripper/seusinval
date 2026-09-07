@@ -114,7 +114,7 @@ export function FloatingChat({
   return (
     <section
       aria-label={`Chat com ${agent.name}`}
-      className="chat-panel fixed inset-x-3 bottom-3 z-40 flex h-[min(640px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-3)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[min(460px,calc(100vw-1.5rem))] sm:max-w-[480px]"
+      className="chat-panel fixed inset-x-3 bottom-3 z-40 flex h-[min(640px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-3)] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:min-h-[620px] sm:h-[min(680px,calc(100dvh-2rem))] sm:w-[min(480px,calc(100vw-2rem))] sm:min-w-[440px]"
     >
       <header className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: agent.accent }}>
         <span className="relative">

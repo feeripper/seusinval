@@ -5,7 +5,7 @@ import { Activity, Bell, CalendarDays, ChevronRight, CircleAlert, Database, Info
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Indicator, indicators as demo } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
-import { DOMAINS, DOMAIN_META, Domain, PERIOD, statusAt, statusOf } from '@/lib/presentation';
+import { DOMAINS, DOMAIN_BY_SLUG, DOMAIN_META, DOMAIN_SLUGS, Domain, PERIOD, STATUS_BY_SLUG, STATUS_SLUGS, Status, statusAt, statusOf } from '@/lib/presentation';
 import { AgentId, agentById, questionFromAction } from '@/lib/agents';
 import { ActionNow } from '@/components/governance/action-now';
 import { AgentAvatar } from '@/components/governance/agent-avatar';
@@ -39,25 +39,63 @@ const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
   'Meus acompanhamentos': { eyebrow: 'Notificações', subtitle: 'Assine indicadores e acompanhe o histórico de notificações por e-mail.' },
 };
 
+function readUrlState(): { domain: Domain | 'Todos'; status: Filter; q: string; initialView: View } {
+  if (typeof window === 'undefined') return { domain: 'Todos', status: 'Todos', q: '', initialView: 'Governança' };
+  const params = new URLSearchParams(window.location.search);
+  const domainParam = params.get('domain');
+  const statusParam = params.get('status');
+  const q = params.get('q') ?? '';
+  const domain = domainParam ? (DOMAIN_BY_SLUG[domainParam] as Domain | undefined) : null;
+  const status = statusParam ? (STATUS_BY_SLUG[statusParam] as Filter | undefined) : null;
+  let initialView: View = 'Governança';
+  let resolvedDomain: Domain | 'Todos' = 'Todos';
+  if (domain && status && DOMAINS.includes(domain)) {
+    resolvedDomain = domain;
+    initialView = 'Central de alertas';
+  } else if (domain && DOMAINS.includes(domain)) {
+    resolvedDomain = domain;
+    initialView = domain;
+  } else if (status) {
+    initialView = 'Central de alertas';
+  }
+  return { domain: resolvedDomain, status: status ?? 'Todos', q, initialView };
+}
+
 export default function Page() {
-  const [view, setView] = useState<View>('Governança');
+  const [view, setView] = useState<View>(() => readUrlState().initialView);
   const [rows, setRows] = useState<Indicator[]>(demo);
   const [mode, setMode] = useState('demo');
   const [aiReady, setAiReady] = useState(false);
   const [error, setError] = useState('');
   const [chatError, setChatError] = useState('');
-  const [filter, setFilter] = useState<Filter>('Todos');
+  const [filter, setFilter] = useState<Filter>(() => readUrlState().status);
   const [selected, setSelected] = useState<Indicator | null>(null);
   const [chat, setChat] = useState(false);
   const [chatMin, setChatMin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => readUrlState().q);
   const [statusLine, setStatusLine] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [agentId, setAgentId] = useState<AgentId>('sinval');
   const [conversationId, setConversationId] = useState('');
   const [preselectedSubscriptions, setPreselectedSubscriptions] = useState<string[]>([]);
+  const [alertDomain, setAlertDomain] = useState<Domain | 'Todos'>(() => readUrlState().domain);
+
+  // Sync to URL whenever filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (DOMAINS.includes(view as Domain)) {
+      params.set('domain', DOMAIN_SLUGS[view as Domain]);
+    } else if (view === 'Central de alertas' && alertDomain !== 'Todos') {
+      params.set('domain', DOMAIN_SLUGS[alertDomain as Domain]);
+    }
+    if (filter !== 'Todos') params.set('status', STATUS_SLUGS[filter as Status]);
+    if (query) params.set('q', query);
+    const qs = params.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState({}, '', url);
+  }, [view, alertDomain, filter, query]);
 
   useEffect(() => {
     fetch('/api/indicators')
@@ -72,7 +110,8 @@ export default function Page() {
   }, []);
 
   const isDomain = (DOMAINS as readonly string[]).includes(view);
-  const scope = useMemo(() => (isDomain ? rows.filter(i => i.domain === view) : rows), [rows, view, isDomain]);
+  const activeDomain: Domain | 'Todos' = useMemo(() => (isDomain ? (view as Domain) : view === 'Central de alertas' ? alertDomain : 'Todos'), [isDomain, view, alertDomain]);
+  const scope = useMemo(() => (activeDomain === 'Todos' ? rows : rows.filter(i => i.domain === activeDomain)), [rows, activeDomain]);
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return scope.filter(i => {
@@ -100,7 +139,7 @@ export default function Page() {
       question: q,
       agent: agentId,
       conversationId,
-      domain: isDomain ? view : 'Todos',
+      domain: activeDomain === 'Todos' ? 'Todos' : activeDomain,
       context: { currentPage: view, selectedIndicator: selected?.id ?? '' },
       stream: true,
     };
@@ -162,7 +201,17 @@ export default function Page() {
     }
   }
 
-  function navigate(v: View, f: Filter = 'Todos') {
+  type NavigateOptions = { filter?: Filter; domain?: Domain | 'Todos' };
+  function navigate(v: View, opts?: Filter | NavigateOptions) {
+    const options: NavigateOptions = typeof opts === 'string' ? { filter: opts } : (opts ?? {});
+    const f: Filter = options.filter ?? 'Todos';
+    let domain: Domain | 'Todos' = 'Todos';
+    if ((DOMAINS as readonly string[]).includes(v)) {
+      domain = v as Domain;
+    } else if (v === 'Central de alertas') {
+      domain = options.domain ?? activeDomain;
+    }
+    setAlertDomain(domain);
     setView(v);
     setFilter(f);
     setQuery('');
@@ -198,13 +247,18 @@ export default function Page() {
           <div className="flex min-w-0 items-center gap-2 text-[13px] text-n-500">
             <SidebarTrigger className="size-9 rounded-lg text-n-700 hover:bg-n-100 md:hidden" aria-label="Abrir navegação" />
             <button type="button" onClick={() => navigate('Governança')} className="hidden rounded-md px-1 py-0.5 font-medium hover:bg-n-100 hover:text-n-900 sm:inline">Governança</button>
-            {view !== 'Governança' && (
+            {activeDomain !== 'Todos' && (
+              <>
+                <ChevronRight size={14} className="hidden sm:inline" aria-hidden />
+                <button type="button" onClick={() => navigate(activeDomain as View)} className="hidden rounded-md px-1 py-0.5 font-medium hover:bg-n-100 hover:text-n-900 sm:inline">{activeDomain}</button>
+              </>
+            )}
+            {view !== 'Governança' && view !== activeDomain && (
               <>
                 <ChevronRight size={14} className="hidden sm:inline" aria-hidden />
                 <strong className="truncate font-semibold text-n-900">{view}</strong>
               </>
             )}
-            {view === 'Governança' && <strong className="truncate font-semibold text-n-900 sm:hidden">{view}</strong>}
           </div>
           <div className="flex items-center gap-2">
             <span className={cn('hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 sm:inline-flex', mode === 'demo' ? 'bg-warn-100 text-warn-600 ring-warn-200' : 'bg-ok-100 text-ok-600 ring-ok-200')}>
@@ -227,7 +281,11 @@ export default function Page() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0">
               <div className="eyebrow">{copy.eyebrow}</div>
-              <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight text-n-900 sm:text-[30px]">{view}</h1>
+              <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight text-n-900 sm:text-[30px]">
+                {view === 'Central de alertas' && activeDomain !== 'Todos' ? `${activeDomain} · ` : ''}
+                {view}
+                {view === 'Central de alertas' && filter !== 'Todos' ? <span className="ml-2 text-[20px] text-n-500">({filter.toLowerCase()})</span> : null}
+              </h1>
               <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-n-500">{copy.subtitle}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -253,7 +311,7 @@ export default function Page() {
                 <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Até 10 p.p. da meta" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Filtrar atenção' : undefined} onCta={() => setFilter('Atenção')} />
                 <KpiCard label="Na meta" value={healthy} unit={`de ${scope.length}`} context="Sem alerta aberto" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
               </div>
-              <AlertList scope={scope} filter={filter} onFilter={setFilter} onSelect={setSelected} onAsk={ask} />
+              <AlertList scope={scope} filter={filter} onFilter={setFilter} onSelect={setSelected} onAsk={ask} onResetFilters={() => navigate('Governança')} />
             </>
           ) : (
             <>
@@ -261,13 +319,13 @@ export default function Page() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <KpiCard label="Indicadores monitorados" value={scope.length} unit="indicadores" context={isDomain ? 'Domínio selecionado' : '4 domínios de governança'} icon={LayoutDashboard} />
                 <KpiCard label="Dentro da meta" value={healthy} unit={`${Math.round((healthy / (scope.length || 1)) * 100)}%`} context="Controles em patamar esperado" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
-                <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Próximos da meta estabelecida" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Ver em atenção' : undefined} onCta={() => navigate('Central de alertas', 'Atenção')} />
-                <KpiCard label="Críticos" value={critical} unit={critical ? 'ação necessária' : 'nenhum'} context="Desvio relevante da meta" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Ver prioridades' : undefined} onCta={() => navigate('Central de alertas', 'Crítico')} />
+                <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Próximos da meta estabelecida" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Ver em atenção' : undefined} onCta={() => navigate('Central de alertas', { filter: 'Atenção', domain: activeDomain })} />
+                <KpiCard label="Críticos" value={critical} unit={critical ? 'ação necessária' : 'nenhum'} context="Desvio relevante da meta" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Ver prioridades' : undefined} onCta={() => navigate('Central de alertas', { filter: 'Crítico', domain: activeDomain })} />
               </div>
 
               {/* Ação agora + prioridades */}
               <div className="grid gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-7"><ActionNow rows={scope} onSelect={setSelected} onSeeAll={() => navigate('Central de alertas')} /></div>
+                <div className="lg:col-span-7"><ActionNow rows={scope} onSelect={setSelected} onSeeAll={() => navigate('Central de alertas', { domain: activeDomain })} /></div>
                 <div className="lg:col-span-5"><Priorities rows={scope} onSelect={setSelected} onAsk={ask} /></div>
               </div>
 
@@ -284,7 +342,7 @@ export default function Page() {
                 </section>
               )}
 
-              <TrendChart rows={rows} highlight={isDomain ? (view as Domain) : undefined} />
+              <TrendChart rows={rows} highlight={activeDomain !== 'Todos' ? activeDomain : undefined} />
 
               {!isDomain && <AgentsGallery available={aiReady || mode === 'demo'} onTalk={openChat} />}
 
@@ -322,7 +380,7 @@ export default function Page() {
         statusLine={statusLine}
         error={chatError}
         mode={aiReady ? 'llm' : mode}
-        view={view}
+        view={activeDomain === 'Todos' ? view : activeDomain}
         rows={scope}
         agentId={agentId}
         onAgentChange={setAgentId}
