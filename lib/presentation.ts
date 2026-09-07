@@ -1,15 +1,17 @@
-import { Indicator, fmt, months, projection, status } from './indicators';
+import { Indicator, fmt, projection, status } from './indicators';
+import { HISTORY_MONTHS, HORIZON_MONTHS, forecastSeries } from './forecast';
 
 export type Status = 'Na meta' | 'Atenção' | 'Crítico';
 export type Tone = 'ok' | 'warn' | 'crit';
 
-export const DOMAINS = ['Privacidade de dados', 'Proteção de dados', 'Riscos de IA'] as const;
+export const DOMAINS = ['Privacidade de dados', 'Proteção de dados', 'Riscos de IA', 'Governança de dados'] as const;
 export type Domain = (typeof DOMAINS)[number];
 
 export const DOMAIN_META: Record<Domain, { short: string; color: string; key: string; blurb: string }> = {
   'Privacidade de dados': { short: 'Privacidade', color: 'var(--dom-privacy)', key: 'privacy', blurb: 'Direitos dos titulares, inventário e avaliações de impacto.' },
   'Proteção de dados': { short: 'Proteção', color: 'var(--dom-protection)', key: 'protection', blurb: 'Criptografia, acessos privilegiados e incidentes.' },
   'Riscos de IA': { short: 'Riscos de IA', color: 'var(--dom-ai)', key: 'ai', blurb: 'Avaliação, monitoramento de viés e supervisão humana.' },
+  'Governança de dados': { short: 'Governança', color: 'var(--dom-gov)', key: 'gov', blurb: 'Políticas, maturidade, treinamentos e controles de dados.' },
 };
 
 export const STATUS_META: Record<Status, { tone: Tone; rank: number; hint: string }> = {
@@ -20,7 +22,12 @@ export const STATUS_META: Record<Status, { tone: Tone; rank: number; hint: strin
 
 export const PERIOD = { label: 'Agosto de 2026', short: 'Ago 2026', reference: '31 ago 2026 · fechamento mensal', previous: 'julho', next: 'setembro' };
 
-export const unitLabel = (i: Indicator, n: number) => (i.unit === '%' ? `${fmt(n)} p.p.` : `${fmt(n)} ${Math.abs(n) === 1 ? 'incidente' : 'incidentes'}`);
+export function unitLabel(i: Indicator, n: number) {
+  if (i.unit === '%') return `${fmt(n)} p.p.`;
+  if (i.unit === ' dias') return `${fmt(n)} ${Math.abs(n) === 1 ? 'dia' : 'dias'}`;
+  if (i.unit === ' h') return `${fmt(n)} h`;
+  return `${fmt(n)} ${Math.abs(n) === 1 ? 'ocorrência' : 'ocorrências'}`;
+}
 export const valueLabel = (i: Indicator, v = i.value) => `${fmt(v)}${i.unit}`;
 export const targetLabel = (i: Indicator) => `${i.direction === 'up' ? '≥' : '≤'} ${fmt(i.target)}${i.unit}`;
 
@@ -37,9 +44,10 @@ export function delta(i: Indicator) {
   return { diff, abs: Math.abs(diff), improved, flat: diff === 0 };
 }
 
-/** Tendência dos últimos três meses (jun→ago). */
+/** Tendência dos últimos três meses da série. */
 export function trend(i: Indicator): 'up' | 'down' | 'flat' {
-  const d = i.history[5] - i.history[3];
+  const n = i.history.length;
+  const d = i.history[n - 1] - i.history[Math.max(0, n - 3)];
   if (Math.abs(d) < 0.5) return 'flat';
   return d > 0 ? 'up' : 'down';
 }
@@ -67,31 +75,51 @@ export function whyText(i: Indicator) {
   const g = gap(i);
   const move = d.flat ? `Estável em relação a ${PERIOD.previous}.` : `${d.improved ? 'Melhora' : 'Piora'} de ${unitLabel(i, d.abs)} em relação a ${PERIOD.previous}.`;
   if (i.unit !== '%') {
-    return s === 'Na meta' ? `Nenhum incidente registrado no período. ${move}` : `${fmt(i.value)} ${i.value === 1 ? 'incidente registrado' : 'incidentes registrados'} com meta zero. Qualquer ocorrência é tratada como crítica. ${move}`;
+    if (i.unit === ' dias' || i.unit === ' h') {
+      return s === 'Na meta' ? `Meta de ${fmt(i.target)}${i.unit} atingida com ${fmt(i.value)}${i.unit}. ${move}` : `Está ${fmt(g)}${i.unit} ${i.direction === 'down' ? 'acima' : 'abaixo'} da meta de ${fmt(i.target)}${i.unit}. ${move}`;
+    }
+    return s === 'Na meta' ? `Nenhuma ocorrência no período. ${move}` : `${fmt(i.value)} ${i.value === 1 ? 'ocorrência registrada' : 'ocorrências registradas'} com meta ${fmt(i.target)}. ${move}`;
   }
   if (s === 'Na meta') return `Meta de ${fmt(i.target)}% atingida com ${fmt(i.value)}%. ${move}`;
   return `Está ${fmt(g)} p.p. abaixo da meta de ${fmt(i.target)}%; ${fmt(pending(i))} de ${fmt(i.denominator)} registros pendentes. ${move}`;
 }
 
 export function calcText(i: Indicator) {
-  return i.unit === '%' ? `${fmt(i.numerator)} de ${fmt(i.denominator)} registros × 100 = ${fmt(i.value)}%.` : `Contagem de ${fmt(i.value)} incidentes no período.`;
+  return i.unit === '%' ? `${fmt(i.numerator)} de ${fmt(i.denominator)} registros × 100 = ${fmt(i.value)}%.` : `Leitura de ${fmt(i.value)}${i.unit || ' ocorrências'} no período.`;
 }
 
-/** Série mensal com médias por domínio (indicadores percentuais) e ponto de projeção. */
+/** Série mensal com médias por domínio (indicadores percentuais) e horizonte Holt. */
 export type TrendPoint = { month: string; projected: boolean } & Record<string, string | number | boolean | null>;
 
+const CHART_HISTORY = HISTORY_MONTHS.slice(-12);
+
 export function trendSeries(rows: Indicator[]): TrendPoint[] {
-  return [...months, 'Set'].map((month, j) => {
-    const point: TrendPoint = { month, projected: j === 6 };
+  const months = [...CHART_HISTORY, ...HORIZON_MONTHS];
+  return months.map((month, j) => {
+    const projected = j >= CHART_HISTORY.length;
+    const point: TrendPoint = { month, projected };
     DOMAINS.forEach(domain => {
       const key = DOMAIN_META[domain].key;
       const group = rows.filter(i => i.domain === domain && i.unit === '%');
       const avg = (fn: (i: Indicator) => number) => (group.length ? Math.round((group.reduce((s, i) => s + fn(i), 0) / group.length) * 10) / 10 : null);
-      point[key] = j < 6 ? avg(i => i.history[j]) : null;
-      point[`${key}_p`] = j === 5 ? avg(i => i.history[5]) : j === 6 ? avg(i => projection(i)) : null;
+      if (!projected) {
+        const abs = HISTORY_MONTHS.length - CHART_HISTORY.length + j;
+        point[key] = avg(i => historyAt(i, abs) ?? i.value);
+        point[`${key}_p`] = j === CHART_HISTORY.length - 1 ? avg(i => i.history[i.history.length - 1]) : null;
+      } else {
+        point[key] = null;
+        const h = j - CHART_HISTORY.length;
+        point[`${key}_p`] = avg(i => forecastSeries(i.history, i.unit, i.direction).points[h]?.value ?? projection(i));
+      }
     });
     return point;
   });
+}
+
+function historyAt(i: Indicator, absIndex: number) {
+  const offset = HISTORY_MONTHS.length - i.history.length;
+  const idx = absIndex - offset;
+  return idx >= 0 && idx < i.history.length ? i.history[idx] : null;
 }
 
 export function domainSummary(rows: Indicator[], domain: Domain) {
@@ -111,9 +139,9 @@ export function suggestedQuestions(view: string, rows: Indicator[]) {
   const first = open[0];
   const list: string[] = [];
   if (first) list.push(`Por que ${first.id} está ${statusOf(first).toLowerCase()}?`);
-  list.push(view === 'Visão geral' || view === 'Governança' || view === 'Central de alertas' ? 'Quais indicadores precisam de atenção?' : `Resuma as prioridades em ${view}`);
+  list.push(view === 'Governança' || view === 'Central de alertas' ? 'Quais indicadores precisam de atenção?' : `Resuma as prioridades em ${view}`);
   list.push('Qual a tendência para o próximo mês?');
-  if (view === 'Visão geral') list.push('Resuma os riscos de IA');
+  if (view === 'Governança') list.push('Resuma os riscos de IA');
   return Array.from(new Set(list)).slice(0, 4);
 }
 
@@ -125,7 +153,7 @@ export function suggestedQuestions(view: string, rows: Indicator[]) {
 export type AnswerItem = { id: string; name: string; value: string; target: string; status: Status; projection?: string; action: string; source: string; owner: string };
 export type StructuredAnswer = { summary: string; items: AnswerItem[]; method?: string; disclaimer?: string };
 
-const ITEM_RE = /^([A-Z]+-\d{3}) · (.+?): (\S+) \(meta ([^)]+)\)\. (Na meta|Atenção|Crítico)\. (?:Projeção ilustrativa para setembro: ([^.]+)\. )?(.+?) Fonte: ([^;]+); responsável: (.+?)\.$/;
+const ITEM_RE = /^([A-Z]+-\d{3}) · (.+?): (.+?) \(meta ([^)]+)\)\. (Na meta|Atenção|Crítico)\. (?:Projeção Holt para setembro: ([^.]+)\. )?(.+?) Fonte: ([^;]+); responsável: (.+?)\.$/;
 
 export function parseAnswer(text: string): StructuredAnswer | null {
   const parts = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);

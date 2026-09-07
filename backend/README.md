@@ -12,6 +12,8 @@ internal/ai
   client.go     OpenAI Chat Completions API
   service.go    orquestração, evidência e histórico
   ratelimit.go  limite por IP
+internal/forecast
+  forecast.go   Holt determinístico, faixa de confiança e texto explicável
 ```
 
 Agentes:

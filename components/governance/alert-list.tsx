@@ -99,7 +99,7 @@ export function AlertList({
           <span className="inline-flex size-12 items-center justify-center rounded-full bg-ok-100 text-ok-600"><ShieldCheck size={22} aria-hidden /></span>
           <p className="text-sm font-semibold text-n-800">Nenhum alerta nesta situação</p>
           <p className="max-w-xs text-xs text-n-500">{open.length ? 'Ajuste o filtro para ver os demais alertas.' : 'Todos os indicadores deste recorte estão na meta.'}</p>
-          {filter !== 'Todos' && <button type="button" onClick={() => onFilter('Todos')} className="mt-2 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>}
+          {filter !== 'Todos' && <button type="button" onClick={() => onFilter('Todos')} className="mt-2 rounded-md bg-n-0 px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>}
         </div>
       )}
     </section>

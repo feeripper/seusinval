@@ -40,7 +40,7 @@ export function Priorities({
                       <span className="inline-flex items-center gap-1"><Clock size={12} aria-hidden />Prazo sugerido: {suggestedDeadline(s)}</span>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <button type="button" onClick={() => onSelect(i)} className="rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 transition-colors hover:bg-n-100">
+                      <button type="button" onClick={() => onSelect(i)} className="rounded-md bg-n-0 px-2.5 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 transition-colors hover:bg-n-100">
                         Ver análise · {i.id}
                       </button>
                       <button type="button" onClick={() => onAsk(`Analise o indicador ${i.id} e sua tendência futura`)} className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold text-ink-700 transition-colors hover:bg-ink-50">

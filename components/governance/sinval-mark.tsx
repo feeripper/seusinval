@@ -1,22 +1,18 @@
 import { cn } from '@/lib/utils';
 
-/** Marca do assistente: monograma sóbrio em azul profundo com ponto laranja de "sinal". */
 export function SinvalMark({ size = 36, className, inverted = false }: { size?: number; className?: string; inverted?: boolean }) {
   return (
-    <span
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
       aria-hidden
-      className={cn(
-        'relative inline-flex shrink-0 items-center justify-center rounded-[28%] font-semibold tracking-tight',
-        inverted ? 'bg-white/12 text-white ring-1 ring-white/20' : 'ink-gradient text-white shadow-[var(--shadow-2)]',
-        className,
-      )}
-      style={{ width: size, height: size, fontSize: size * 0.5 }}
+      className={cn('shrink-0', className)}
     >
-      S
-      <span
-        className="absolute rounded-full bg-brand-500 ring-2 ring-white"
-        style={{ width: size * 0.26, height: size * 0.26, right: -size * 0.06, bottom: -size * 0.06 }}
-      />
-    </span>
+      <rect width="32" height="32" rx="8" fill={inverted ? 'rgba(255,255,255,0.12)' : '#08244a'} />
+      <path d="M10.2 23V9.4h5.1c3.15 0 5.15 1.85 5.15 4.55 0 1.85-1 3.25-2.7 3.95L21.6 23h-3.05l-3.55-4.85h-1.7V23H10.2Zm3.1-7.35h1.85c1.55 0 2.5-.9 2.5-2.25s-.95-2.2-2.5-2.2h-1.85v4.45Z" fill="#fff" />
+      <circle cx="24.2" cy="24.2" r="3.2" fill="#ec7000" />
+    </svg>
   );
 }

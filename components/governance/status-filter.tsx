@@ -29,7 +29,7 @@ export function StatusFilter({
             onClick={() => onChange(o)}
             className={cn(
               'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors',
-              active ? 'bg-white text-n-900 shadow-[var(--shadow-1)]' : 'text-n-500 hover:text-n-800',
+              active ? 'bg-n-0 text-n-900 shadow-[var(--shadow-1)]' : 'text-n-500 hover:text-n-800',
             )}
           >
             {o === 'Todos' ? 'Todas' : o}

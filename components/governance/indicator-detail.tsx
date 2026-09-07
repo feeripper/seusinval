@@ -1,10 +1,12 @@
 'use client';
-import { ArrowDownRight, ArrowUpRight, CalendarDays, Clock, Database, Minus, MessageSquareText, Sparkles, UserRound } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CalendarDays, Clock, Database, Minus, MessageSquareText, UserRound } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Indicator, fmt, months, projection } from '@/lib/indicators';
+import { Indicator, fmt } from '@/lib/indicators';
+import { HISTORY_MONTHS, HORIZON_MONTHS, forecastSeries } from '@/lib/forecast';
 import { cn } from '@/lib/utils';
 import { DOMAIN_META, Domain, PERIOD, calcText, delta, gap, statusOf, suggestedDeadline, targetLabel, unitLabel, valueLabel, whyText } from '@/lib/presentation';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ForecastExplainer } from './forecast-explainer';
 import { StatusBadge } from './status-badge';
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -20,14 +22,19 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
 }
 
 function DetailChart({ i }: { i: Indicator }) {
-  const proj = projection(i);
-  const data = [...months, 'Set'].map((m, j) => ({ month: m, v: j < 6 ? i.history[j] : null, p: j === 5 ? i.history[5] : j === 6 ? Math.round(proj * 10) / 10 : null }));
-  const values = [...i.history, proj, i.target];
+  const fc = forecastSeries(i.history, i.unit, i.direction);
+  const hist = HISTORY_MONTHS.slice(-12);
+  const data = [...hist, ...HORIZON_MONTHS].map((m, j) => {
+    const histIdx = i.history.length - hist.length + j;
+    if (j < hist.length) return { month: m, v: histIdx >= 0 ? i.history[histIdx] : null, p: j === hist.length - 1 ? i.history[i.history.length - 1] : null };
+    return { month: m, v: null, p: fc.points[j - hist.length]?.value ?? null };
+  });
+  const values = [...i.history, ...fc.points.map(p => p.value), i.target];
   const min = Math.floor(Math.min(...values) - 2);
   const max = Math.ceil(Math.max(...values) + 2);
   const color = DOMAIN_META[i.domain as Domain].color;
   return (
-    <div className="h-[150px] w-full" role="img" aria-label={`Histórico: ${i.history.join(', ')}. Cenário para setembro: ${fmt(proj)}.`}>
+    <div className="h-[150px] w-full" role="img" aria-label={`Histórico: ${i.history.join(', ')}. Cenário Holt: ${fc.points.map(p => `${p.month} ${fmt(p.value)}`).join(', ')}.`}>
       <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 480, height: 150 }}>
         <LineChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="var(--n-200)" strokeDasharray="2 4" />
@@ -52,7 +59,7 @@ export function IndicatorDetail({ indicator, onClose, onAsk }: { indicator: Indi
   const i = indicator;
   return (
     <Sheet open={!!i} onOpenChange={o => !o && onClose()}>
-      <SheetContent className="w-full gap-0 overflow-y-auto border-l-0 bg-white p-0 sm:max-w-[560px] [&>button]:top-5 [&>button]:right-5 [&>button]:size-8 [&>button]:rounded-md [&>button]:opacity-100 [&>button]:hover:bg-n-100 [&>button]:inline-flex [&>button]:items-center [&>button]:justify-center">
+      <SheetContent className="w-full gap-0 overflow-y-auto border-l-0 bg-n-0 p-0 sm:max-w-[560px] [&>button]:top-5 [&>button]:right-5 [&>button]:size-8 [&>button]:rounded-md [&>button]:opacity-100 [&>button]:hover:bg-n-100 [&>button]:inline-flex [&>button]:items-center [&>button]:justify-center">
         {i && (() => {
           const s = statusOf(i);
           const d = delta(i);
@@ -117,14 +124,7 @@ export function IndicatorDetail({ indicator, onClose, onAsk }: { indicator: Indi
                   </div>
                 </Step>
 
-                <section className="rounded-xl border border-ink-200 bg-ink-50 p-4">
-                  <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] text-ink-700 uppercase"><Sparkles size={13} aria-hidden />Cenário ilustrativo · {PERIOD.next}</div>
-                  <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                    <span className="num text-2xl font-semibold text-ink-900">{fmt(projection(i))}{i.unit}</span>
-                    <span className="text-xs text-ink-700">{s === 'Na meta' ? 'tende a permanecer na meta' : projection(i) * (i.direction === 'up' ? 1 : -1) >= i.target * (i.direction === 'up' ? 1 : -1) ? 'pode alcançar a meta' : 'ainda abaixo da meta'} se a variação recente se mantiver</span>
-                  </div>
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-ink-800/80">Extrapolação da variação média jun–ago, limitada a 0–100% nos percentuais. Não é previsão validada nem parecer de conformidade.</p>
-                </section>
+                <ForecastExplainer i={i} />
 
                 <p className="text-[11.5px] leading-relaxed text-n-500">Critério demonstrativo: meta atingida = na meta; desvio de até 10 p.p. = atenção; acima de 10 p.p. = crítico. Qualquer incidente é crítico. Metas internas fictícias.</p>
 

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     agent: typeof data.agent === 'string' ? data.agent : 'sinval',
     conversationId: typeof data.conversationId === 'string' ? data.conversationId : '',
     domain: typeof data.domain === 'string' ? data.domain : 'Todos',
-    context: data.context && typeof data.context === 'object' ? data.context : { currentPage: typeof data.domain === 'string' ? data.domain : 'Visão geral' },
+    context: data.context && typeof data.context === 'object' ? data.context : { currentPage: typeof data.domain === 'string' ? data.domain : 'Governança' },
     stream: data.stream !== false,
   };
 

@@ -91,3 +91,45 @@ func TestAgentsEndpoint(t *testing.T) {
 		t.Fatalf("body=%s", rec.Body.String())
 	}
 }
+
+func TestIndicatorsIncludesForecast(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/indicators", nil)
+	req.Header.Set("Authorization", "Bearer abcdefghijklmnopqrstuvwx")
+	rec := httptest.NewRecorder()
+	testApp().handler().ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Indicators []struct {
+			ID       string `json:"id"`
+			Forecast struct {
+				Method      string `json:"method"`
+				Points      []any  `json:"points"`
+				Explanation string `json:"explanation"`
+			} `json:"forecast"`
+		} `json:"indicators"`
+		Forecast struct {
+			Method string `json:"method"`
+		} `json:"forecast"`
+		DataNature string `json:"dataNature"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.DataNature != "demonstrativo" {
+		t.Fatalf("dataNature=%s", payload.DataNature)
+	}
+	if payload.Forecast.Method != "holt-linear" {
+		t.Fatalf("method=%s", payload.Forecast.Method)
+	}
+	if len(payload.Indicators) != 1 || payload.Indicators[0].ID != "IA-001" {
+		t.Fatalf("indicators=%+v", payload.Indicators)
+	}
+	if payload.Indicators[0].Forecast.Method != "holt-linear" || len(payload.Indicators[0].Forecast.Points) != 3 {
+		t.Fatalf("forecast=%+v", payload.Indicators[0].Forecast)
+	}
+	if payload.Indicators[0].Forecast.Explanation == "" {
+		t.Fatal("missing explanation")
+	}
+}

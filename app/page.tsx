@@ -18,14 +18,15 @@ import { Message, SinvalChat } from '@/components/governance/sinval-chat';
 import { SinvalCard } from '@/components/governance/sinval-card';
 import { SinvalMark } from '@/components/governance/sinval-mark';
 import { Filter } from '@/components/governance/status-filter';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { TrendChart } from '@/components/governance/trend-chart';
 
 const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
-  'Governança': { eyebrow: 'Governança de dados e IA', subtitle: 'Visão integrada de privacidade, proteção de dados e riscos de IA para decisão executiva.' },
-  'Visão geral': { eyebrow: 'Privacidade, proteção e riscos de IA', subtitle: 'Transforme indicadores em decisões. Antecipe o que precisa de atenção.' },
+  'Governança': { eyebrow: 'Governança de dados e IA', subtitle: 'Visão integrada de privacidade, proteção, governança e riscos de IA para decisão executiva.' },
   'Privacidade de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Privacidade de dados'].blurb },
   'Proteção de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Proteção de dados'].blurb },
   'Riscos de IA': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Riscos de IA'].blurb },
+  'Governança de dados': { eyebrow: 'Domínio', subtitle: DOMAIN_META['Governança de dados'].blurb },
   'Central de alertas': { eyebrow: 'Acompanhamento', subtitle: 'Desvios da meta com contexto, responsável, prazo sugerido e próxima ação.' },
 };
 
@@ -159,7 +160,7 @@ export default function Page() {
 
       <SidebarInset className="min-w-0">
         {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-n-200 bg-white/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-n-200 bg-n-0/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-2 text-[13px] text-n-500">
             <SidebarTrigger className="size-9 rounded-lg text-n-700 hover:bg-n-100 md:hidden" aria-label="Abrir navegação" />
             <button type="button" onClick={() => navigate('Governança')} className="hidden rounded-md px-1 py-0.5 font-medium hover:bg-n-100 hover:text-n-900 sm:inline">Governança</button>
@@ -175,6 +176,7 @@ export default function Page() {
             <span className={cn('hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 sm:inline-flex', mode === 'demo' ? 'bg-warn-100 text-warn-600 ring-warn-200' : 'bg-ok-100 text-ok-600 ring-ok-200')}>
               <Database size={12} aria-hidden />{mode === 'demo' ? 'Dados fictícios' : 'Base conectada'}
             </span>
+            <ThemeToggle />
             <button type="button" aria-label={`Central de alertas, ${openCount} abertos`} onClick={() => navigate('Central de alertas')} className="relative inline-flex size-9 items-center justify-center rounded-lg text-n-700 transition-colors hover:bg-n-100">
               <Bell size={18} aria-hidden />
               {openCount > 0 && <span className="num absolute -top-0.5 -right-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">{openCount}</span>}
@@ -195,7 +197,7 @@ export default function Page() {
               <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-n-500">{copy.subtitle}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-[12.5px] font-medium text-n-700 ring-1 ring-n-200">
+              <span className="inline-flex h-9 items-center gap-2 rounded-lg bg-n-0 px-3 text-[12.5px] font-medium text-n-700 ring-1 ring-n-200">
                 <CalendarDays size={15} className="text-n-500" aria-hidden />{PERIOD.label}
               </span>
               <span className="hidden h-9 items-center gap-2 rounded-lg px-2 text-[12px] text-n-500 md:inline-flex">Referência: {PERIOD.reference}</span>
@@ -221,7 +223,7 @@ export default function Page() {
             <>
               {/* KPIs */}
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <KpiCard label="Indicadores monitorados" value={scope.length} unit="indicadores" context={isDomain ? 'Domínio selecionado' : '3 domínios de governança'} icon={LayoutDashboard} />
+                <KpiCard label="Indicadores monitorados" value={scope.length} unit="indicadores" context={isDomain ? 'Domínio selecionado' : '4 domínios de governança'} icon={LayoutDashboard} />
                 <KpiCard label="Dentro da meta" value={healthy} unit={`${Math.round((healthy / (scope.length || 1)) * 100)}%`} context="Controles em patamar esperado" change={healthy - count('Na meta', 'previous')} tone="ok" icon={ShieldCheck} />
                 <KpiCard label="Em atenção" value={attention} unit="acompanhar" context="Próximos da meta estabelecida" change={attention - count('Atenção', 'previous')} changeGoodWhen="down" tone="warn" icon={Activity} cta={attention ? 'Ver em atenção' : undefined} onCta={() => navigate('Central de alertas', 'Atenção')} />
                 <KpiCard label="Críticos" value={critical} unit={critical ? 'ação necessária' : 'nenhum'} context="Desvio relevante da meta" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Ver prioridades' : undefined} onCta={() => navigate('Central de alertas', 'Crítico')} />
@@ -239,7 +241,7 @@ export default function Page() {
                   <div className="flex items-end justify-between gap-3 px-0.5">
                     <div>
                       <div className="eyebrow">Panorama</div>
-                      <h2 id="domains-title" className="text-[15px] font-semibold tracking-tight text-n-900 sm:text-base">Três domínios de governança</h2>
+                      <h2 id="domains-title" className="text-[15px] font-semibold tracking-tight text-n-900 sm:text-base">Quatro domínios de governança</h2>
                     </div>
                   </div>
                   <DomainCards rows={rows} onOpen={d => navigate(d)} />
@@ -260,14 +262,14 @@ export default function Page() {
                 onFilter={setFilter}
                 onSelect={setSelected}
                 title={isDomain ? `Indicadores de ${view}` : 'Panorama dos indicadores'}
-                description="Resultado, meta, tendência de seis meses e situação em um só lugar."
+                description="Resultado, meta, histórico mensal e situação em um só lugar."
               />
             </>
           )}
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-n-200 pt-5 text-[11.5px] text-n-500">
-            <span>itaú unibanco <span aria-hidden className="mx-1.5">·</span> Governança de dados e IA</span>
-            <span className="inline-flex items-center gap-1.5"><Info size={12} aria-hidden />Protótipo conceitual · metas e dados demonstrativos · projeções são cenários ilustrativos</span>
+            <span>Seu Sinval <span aria-hidden className="mx-1.5">·</span> Governança de dados e IA</span>
+            <span className="inline-flex items-center gap-1.5"><Info size={12} aria-hidden />Protótipo conceitual · dados demonstrativos · previsão Holt explicável</span>
           </footer>
         </div>
       </SidebarInset>

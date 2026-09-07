@@ -21,8 +21,9 @@ after(async () => {
 test("sidebar exposes a working Governança control", async () => {
   const source = await readFile(path.join(root, "components/governance/app-sidebar.tsx"), "utf8");
   assert.match(source, /go\('Governança'\)/);
-  assert.match(source, /label="Governança"/);
+  assert.match(source, /label="Visão geral"/);
   assert.match(source, /Ir para Governança de dados e IA/);
+  assert.match(source, /Seu Sinval/);
 });
 
 test("page breadcrumb navigates to Governança", async () => {
@@ -78,6 +79,19 @@ test("frontend chat route never embeds an OpenAI key", async () => {
   assert.doesNotMatch(source, /OPENAI_API_KEY/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_/);
   assert.match(source, /goBase/);
+});
+
+test("forecast explainer and theme toggle exist", async () => {
+  const explainer = await readFile(path.join(root, "components/governance/forecast-explainer.tsx"), "utf8");
+  assert.match(explainer, /Como esta previsão foi calculada/);
+  assert.match(explainer, /methodLabel/);
+  const toggle = await readFile(path.join(root, "components/theme-toggle.tsx"), "utf8");
+  assert.match(toggle, /setTheme/);
+  const page = await readFile(path.join(root, "app/page.tsx"), "utf8");
+  assert.match(page, /ThemeToggle/);
+  const data = JSON.parse(await readFile(path.join(root, "backend/indicators.json"), "utf8"));
+  assert.equal(data.length, 22);
+  assert.equal(data[0].history.length, 18);
 });
 
 test("status filter and clear-filter controls exist", async () => {

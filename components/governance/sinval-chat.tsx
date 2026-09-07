@@ -60,13 +60,13 @@ export function SinvalChat({
             </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="rounded-full bg-white/10 px-2.5 py-1 font-medium text-white/85 ring-1 ring-white/15">{view === 'Visão geral' || view === 'Governança' || view === 'Central de alertas' ? 'Todos os domínios' : view}</span>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 font-medium text-white/85 ring-1 ring-white/15">{view === 'Governança' || view === 'Central de alertas' ? 'Todos os domínios' : view}</span>
             <span className="rounded-full bg-white/10 px-2.5 py-1 font-medium text-white/85 ring-1 ring-white/15">{PERIOD.label}</span>
             <span className={cn('rounded-full px-2.5 py-1 font-medium ring-1', available ? 'bg-ok-100/20 text-ok-100 ring-ok-200/40' : 'bg-brand-500/20 text-brand-100 ring-brand-500/40')}>{available ? 'Motor OpenAI conectado' : 'IA indisponível'}</span>
           </div>
         </SheetHeader>
 
-        <div className="border-b border-n-200 bg-white px-4 py-3" role="tablist" aria-label="Escolher assistente">
+        <div className="border-b border-n-200 bg-n-0 px-4 py-3" role="tablist" aria-label="Escolher assistente">
           <div className="grid grid-cols-2 gap-2">
             {AGENTS.map(a => (
               <button
@@ -77,7 +77,7 @@ export function SinvalChat({
                 onClick={() => onAgentChange(a.id)}
                 className={cn(
                   'flex items-start gap-2 rounded-xl border px-2.5 py-2 text-left transition-colors',
-                  agentId === a.id ? 'border-ink-200 bg-ink-50' : 'border-n-200 bg-white hover:bg-n-50',
+                  agentId === a.id ? 'border-ink-200 bg-ink-50' : 'border-n-200 bg-n-0 hover:bg-n-50',
                 )}
               >
                 <AgentMark id={a.id} letter={a.mark} size={28} />
@@ -139,7 +139,7 @@ export function SinvalChat({
                           {m.actions && m.actions.length > 0 && idx === messages.length - 1 && !m.streaming && (
                             <div className="mt-3 flex flex-wrap gap-2">
                               {m.actions.map(action => (
-                                <button key={action} type="button" onClick={() => onAsk(action)} className="rounded-md bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">
+                                <button key={action} type="button" onClick={() => onAsk(action)} className="rounded-md bg-n-0 px-2.5 py-1.5 text-[11.5px] font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">
                                   {action}
                                 </button>
                               ))}
@@ -172,7 +172,7 @@ export function SinvalChat({
           <div ref={end} />
         </div>
 
-        <form onSubmit={submit} className="border-t border-n-200 bg-white px-5 py-4 sm:px-6">
+        <form onSubmit={submit} className="border-t border-n-200 bg-n-0 px-5 py-4 sm:px-6">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] text-n-500">{rows.length} indicadores no recorte</p>
             <button type="button" onClick={onClear} disabled={!messages.length && !error} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] font-semibold text-n-600 hover:bg-n-100 disabled:opacity-40">
@@ -180,7 +180,7 @@ export function SinvalChat({
             </button>
           </div>
           <label className="sr-only" htmlFor="sinval-question">Sua pergunta ao assistente</label>
-          <div className="flex items-center gap-2 rounded-xl border border-n-300 bg-white p-1.5 pl-4 transition-shadow focus-within:border-ink-500 focus-within:ring-2 focus-within:ring-ink-500/20">
+          <div className="flex items-center gap-2 rounded-xl border border-n-300 bg-n-0 p-1.5 pl-4 transition-shadow focus-within:border-ink-500 focus-within:ring-2 focus-within:ring-ink-500/20">
             <input
               id="sinval-question"
               maxLength={2000}

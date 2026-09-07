@@ -14,14 +14,15 @@ React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI 
 
 ## Estrutura
 
-- `app/page.tsx`: telas (Governança, visão geral, domínios, central de alertas) e estado.
+- `app/page.tsx`: telas (Governança, quatro domínios, central de alertas) e estado.
 - `app/globals.css`: design system.
 - `lib/indicators.ts`: regras de negócio dos indicadores.
 - `lib/presentation.ts`: apresentação (rótulos, ordenação, textos, gráfico).
 - `lib/agents.ts`: catálogo dos quatro bots no frontend.
 - `components/governance/`: painel, filtros, tabela, chat, sidebar.
 - `backend/internal/ai/`: cliente OpenAI, roteamento, prompts e serviço.
-- `backend/indicators.json`: nove indicadores fictícios.
+- `backend/indicators.json`: 22 indicadores demonstrativos com 18 meses de histórico.
+- `lib/forecast.ts` e `backend/internal/forecast`: suavização de Holt determinística.
 - `app/api/chat`, `app/api/indicators`, `app/api/agents`: proxy de servidor para o Go.
 
 ## Agentes
@@ -70,20 +71,24 @@ O site em [seusinval.vercel.app](https://seusinval.vercel.app) continua no ar se
 
 ## Escopo e metodologia
 
-Referência: agosto de 2026. Percentuais: maior é melhor. Meta atingida = na meta; déficit até 10 p.p. = atenção; acima disso ou qualquer incidente = crítico. Projeção de setembro: agosto + (agosto − junho)/2, limitada a 0–100%. Cenário ilustrativo, sem validação preditiva. Dados e metas são fictícios.
+Referência: agosto de 2026. Percentuais: maior é melhor. Meta atingida = na meta; déficit até 10 p.p. = atenção; acima disso ou qualquer contagem com meta zero = crítico. Previsão: suavização exponencial de Holt (α=0,45; β=0,25) sobre 18 meses demonstrativos, horizonte de 3 meses e faixa de 80% via RMSE in-sample. Sem aleatoriedade. Dados e metas são fictícios.
+
+Tema claro/escuro: botão sol/lua no cabeçalho, persistido por `next-themes` (`localStorage`) e padrão do sistema operacional.
 
 ## Interações revisadas
 
 | Elemento | Ação |
 | --- | --- |
 | Menu / marca **Governança** | Abre a visão Governança de dados e IA |
-| Visão geral, Privacidade, Proteção, Riscos de IA, Central de alertas | Navegam e marcam o item ativo |
+| Visão geral, Privacidade, Proteção, Riscos de IA, Governança de dados, Central de alertas | Navegam e marcam o item ativo |
 | Breadcrumb `Governança > …` | Volta à visão Governança |
 | Filtros de situação | Atualizam tabela e alertas; **Limpar filtro** restaura Todos |
 | Cards de domínio | Abrem o domínio |
 | KPIs com CTA | Filtram ou abrem a central de alertas; KPIs sem ação não parecem clicáveis |
 | Linhas da tabela, alertas, prioridades | Abrem o detalhe do indicador |
-| Gráfico | Alterna histórico/cenário e mostra/oculta domínios |
+| Gráfico | Alterna histórico/cenário Holt e mostra/oculta domínios |
+| Detalhe do indicador | Painel **Como esta previsão foi calculada?** com método, confiança e limitações |
+| Tema claro/escuro | Botão sol/lua no cabeçalho; persiste e respeita o SO |
 | Chat | Quatro bots, streaming, histórico da sessão, limpar conversa, falha amigável |
 
 ## Verificação

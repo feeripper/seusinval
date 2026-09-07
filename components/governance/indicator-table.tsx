@@ -62,7 +62,7 @@ export function IndicatorTable({
                   <th scope="col" className="px-6 py-2.5 font-semibold">Indicador</th>
                   <th scope="col" className="px-4 py-2.5 font-semibold">Resultado</th>
                   <th scope="col" className="px-4 py-2.5 font-semibold">Meta</th>
-                  <th scope="col" className="px-4 py-2.5 font-semibold">Últimos 6 meses</th>
+                  <th scope="col" className="px-4 py-2.5 font-semibold">Histórico</th>
                   <th scope="col" className="px-4 py-2.5 font-semibold">Situação</th>
                   <th scope="col" className="px-4 py-2.5"><span className="sr-only">Detalhes</span></th>
                 </tr>
@@ -131,7 +131,7 @@ export function IndicatorTable({
           <span className="inline-flex size-11 items-center justify-center rounded-full bg-n-100 text-n-500"><SearchX size={20} aria-hidden /></span>
           <p className="text-sm font-semibold text-n-800">Nenhum indicador nesta situação</p>
           <p className="max-w-xs text-xs text-n-500">Ajuste o filtro para ampliar a visualização.</p>
-          <button type="button" onClick={() => onFilter('Todos')} className="mt-2 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>
+          <button type="button" onClick={() => onFilter('Todos')} className="mt-2 rounded-md bg-n-0 px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>
         </div>
       )}
     </Panel>

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"sinval/backend/internal/ai"
+	"sinval/backend/internal/forecast"
 )
 
 //go:embed indicators.json
@@ -26,6 +27,7 @@ type Indicator struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Domain      string    `json:"domain"`
+	UnitArea    string    `json:"unitArea,omitempty"`
 	Value       float64   `json:"value"`
 	Previous    float64   `json:"previous"`
 	Target      float64   `json:"target"`
@@ -37,6 +39,10 @@ type Indicator struct {
 	Denominator float64   `json:"denominator"`
 	Action      string    `json:"action"`
 	History     []float64 `json:"history"`
+	UpdatedAt   string    `json:"updatedAt,omitempty"`
+	Records     float64   `json:"records,omitempty"`
+	Criticality string    `json:"criticality,omitempty"`
+	Forecast    any       `json:"forecast,omitempty"`
 }
 type App struct {
 	Rows  []Indicator
@@ -60,10 +66,19 @@ func state(i Indicator) string {
 	if gap <= 0 {
 		return "Na meta"
 	}
-	if gap > 10 || i.Unit == "" {
+	if i.Unit == "" || gap > 10 {
 		return "Crítico"
 	}
 	return "Atenção"
+}
+
+func withForecast(rows []Indicator) []Indicator {
+	out := make([]Indicator, len(rows))
+	copy(out, rows)
+	for i := range out {
+		out[i].Forecast = forecast.Series(out[i].History, out[i].Unit, out[i].Direction)
+	}
+	return out
 }
 
 func (a *App) handler() http.Handler {
@@ -80,7 +95,18 @@ func (a *App) handler() http.Handler {
 		if a.AI != nil && a.AI.Ready() {
 			mode = "llm"
 		}
-		reply(w, 200, map[string]any{"indicators": a.Rows, "mode": mode})
+		reply(w, 200, map[string]any{
+			"indicators": withForecast(a.Rows),
+			"mode":       mode,
+			"period":     "Agosto de 2026",
+			"dataNature": "demonstrativo",
+			"forecast": map[string]any{
+				"method":  forecast.MethodHolt,
+				"label":   "Suavização exponencial de Holt (tendência linear)",
+				"months":  forecast.HistoryMonths,
+				"horizon": forecast.HorizonMonths,
+			},
+		})
 	})
 	mux.HandleFunc("GET /api/agents", func(w http.ResponseWriter, r *http.Request) {
 		status := "indisponível"
@@ -238,9 +264,9 @@ func evidenceFrom(rows []Indicator) []ai.IndicatorEvidence {
 	out := make([]ai.IndicatorEvidence, 0, len(rows))
 	for _, i := range rows {
 		out = append(out, ai.IndicatorEvidence{
-			ID: i.ID, Name: i.Name, Domain: i.Domain, Value: i.Value, Previous: i.Previous,
+			ID: i.ID, Name: i.Name, Domain: i.Domain, UnitArea: i.UnitArea, Value: i.Value, Previous: i.Previous,
 			Target: i.Target, Unit: i.Unit, Direction: i.Direction, Owner: i.Owner, Source: i.Source,
-			Action: i.Action, History: i.History, Status: state(i),
+			Action: i.Action, History: i.History, Status: state(i), UpdatedAt: i.UpdatedAt, Criticality: i.Criticality,
 		})
 	}
 	return out

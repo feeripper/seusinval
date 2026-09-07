@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight, BrainCircuit, LockKeyhole, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowRight, BrainCircuit, LockKeyhole, Scale, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 import { Indicator, fmt } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAINS, DOMAIN_META, Domain, PERIOD, domainSummary } from '@/lib/presentation';
@@ -8,11 +8,12 @@ const ICONS: Record<Domain, React.ComponentType<{ size?: number; className?: str
   'Privacidade de dados': ShieldCheck,
   'Proteção de dados': LockKeyhole,
   'Riscos de IA': BrainCircuit,
+  'Governança de dados': Scale,
 };
 
 export function DomainCards({ rows, onOpen }: { rows: Indicator[]; onOpen: (d: Domain) => void }) {
   return (
-    <div className="grid gap-4 md:grid-cols-3" role="list" aria-label="Panorama por domínio">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" role="list" aria-label="Panorama por domínio">
       {DOMAINS.map(domain => {
         const meta = DOMAIN_META[domain];
         const s = domainSummary(rows, domain);

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Itaú | Governança de dados e IA",
-  description: "Privacidade, proteção de dados e riscos de IA com Seu Sinval.",
+  title: "Seu Sinval | Governança de dados e IA",
+  description: "Painel corporativo de privacidade, proteção de dados, governança e riscos de IA.",
   other: {
     "codex-preview": "development",
   },
@@ -19,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className="antialiased">{children}</body>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

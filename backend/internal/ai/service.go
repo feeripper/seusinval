@@ -24,19 +24,22 @@ var (
 )
 
 type IndicatorEvidence struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Domain    string    `json:"domain"`
-	Value     float64   `json:"value"`
-	Previous  float64   `json:"previous"`
-	Target    float64   `json:"target"`
-	Unit      string    `json:"unit"`
-	Direction string    `json:"direction"`
-	Owner     string    `json:"owner"`
-	Source    string    `json:"source"`
-	Action    string    `json:"action"`
-	History   []float64 `json:"history"`
-	Status    string    `json:"status"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Domain      string    `json:"domain"`
+	UnitArea    string    `json:"unitArea,omitempty"`
+	Value       float64   `json:"value"`
+	Previous    float64   `json:"previous"`
+	Target      float64   `json:"target"`
+	Unit        string    `json:"unit"`
+	Direction   string    `json:"direction"`
+	Owner       string    `json:"owner"`
+	Source      string    `json:"source"`
+	Action      string    `json:"action"`
+	History     []float64 `json:"history"`
+	Status      string    `json:"status"`
+	UpdatedAt   string    `json:"updatedAt,omitempty"`
+	Criticality string    `json:"criticality,omitempty"`
 }
 
 type Service struct {
