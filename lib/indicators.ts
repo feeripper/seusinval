@@ -16,8 +16,8 @@ export function analyze(question:string, rows:Indicator[]=indicators){
  const q=question.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
  const selected=rows.filter(i=>q.includes(i.id.toLowerCase()) || q.includes(i.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
  let filtered=selected.length?selected: /privacidade|titular/.test(q)?rows.filter(i=>i.domain==='Privacidade de dados'):/protecao|acesso|criptografia|incidente/.test(q)?rows.filter(i=>i.domain==='Proteção de dados'):/\bia\b|modelo|vies/.test(q)?rows.filter(i=>i.domain==='Riscos de IA'):/governanca/.test(q)?rows.filter(i=>i.domain==='Governança de dados'):rows;
- if(!/indicador|risco|prior|resum|analis|meta|critico|atencao|futur|proje|tend|privacidade|protecao|titular|acesso|criptografia|incidente|modelo|vies|\bia\b|governanca/.test(q)&&!selected.length) return 'Posso analisar os indicadores desta demonstração, suas metas, tendências e prioridades. Pergunte, por exemplo: “Quais indicadores precisam de atenção?” Não tenho acesso a informações fora desta base.';
- const future=/futur|proje|tend|proximo/.test(q);
+ if(!/indicador|risco|prior|resum|executiv|analis|meta|critico|atencao|futur|proje|tend|previs|privacidade|protecao|titular|acesso|criptografia|incidente|modelo|vies|\bia\b|governanca|lgpd|expost|encaminh|especialista|imediata/.test(q)&&!selected.length) return 'Posso analisar os indicadores desta demonstração, suas metas, tendências e prioridades. Pergunte, por exemplo: “Quais indicadores precisam de atenção?” Não tenho acesso a informações fora desta base.';
+ const future=/futur|proje|tend|proximo|previs/.test(q);
  if(/prior|critico|atencao/.test(q)) filtered=filtered.filter(i=>status(i)!=='Na meta').sort((a,b)=>{
   const rank = (s:string) => s==='Crítico'?0:s==='Atenção'?1:2;
   const gapOf = (i:Indicator) => i.direction==='up'?i.target-i.value:i.value-i.target;

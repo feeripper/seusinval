@@ -1,25 +1,32 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Bell, CalendarDays, ChevronRight, CircleAlert, Database, Info, LayoutDashboard, MessageSquareText, ShieldCheck, TriangleAlert } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Activity, Bell, CalendarDays, ChevronRight, CircleAlert, Database, Info, LayoutDashboard, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Indicator, indicators as demo } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAINS, DOMAIN_META, Domain, PERIOD, statusAt, statusOf } from '@/lib/presentation';
 import { AgentId, agentById, questionFromAction } from '@/lib/agents';
 import { ActionNow } from '@/components/governance/action-now';
+import { AgentAvatar } from '@/components/governance/agent-avatar';
+import { AgentsGallery } from '@/components/governance/agents-gallery';
 import { AlertList } from '@/components/governance/alert-list';
 import { AppSidebar, View } from '@/components/governance/app-sidebar';
+import { DashboardSkeleton } from '@/components/governance/dashboard-skeleton';
 import { DomainCards } from '@/components/governance/domain-cards';
+import { FloatingChat } from '@/components/governance/floating-chat';
 import { IndicatorDetail } from '@/components/governance/indicator-detail';
 import { IndicatorTable } from '@/components/governance/indicator-table';
 import { KpiCard } from '@/components/governance/kpi-card';
 import { Priorities } from '@/components/governance/priorities';
-import { Message, SinvalChat } from '@/components/governance/sinval-chat';
-import { SinvalCard } from '@/components/governance/sinval-card';
-import { SinvalMark } from '@/components/governance/sinval-mark';
+import { Message } from '@/components/governance/sinval-chat';
 import { Filter } from '@/components/governance/status-filter';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { TrendChart } from '@/components/governance/trend-chart';
+
+const TrendChart = dynamic(() => import('@/components/governance/trend-chart').then(m => m.TrendChart), {
+  ssr: false,
+  loading: () => <div className="surface h-[320px] animate-pulse" aria-hidden />,
+});
 
 const VIEW_COPY: Record<View, { eyebrow: string; subtitle: string }> = {
   'Governança': { eyebrow: 'Governança de dados e IA', subtitle: 'Visão integrada de privacidade, proteção, governança e riscos de IA para decisão executiva.' },
@@ -40,7 +47,10 @@ export default function Page() {
   const [filter, setFilter] = useState<Filter>('Todos');
   const [selected, setSelected] = useState<Indicator | null>(null);
   const [chat, setChat] = useState(false);
+  const [chatMin, setChatMin] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const [statusLine, setStatusLine] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [agentId, setAgentId] = useState<AgentId>('sinval');
@@ -50,7 +60,8 @@ export default function Page() {
     fetch('/api/indicators')
       .then(r => { if (!r.ok) throw Error(); return r.json(); })
       .then(d => { if (Array.isArray(d.indicators)) setRows(d.indicators); setMode(d.mode === 'llm' ? 'llm' : 'demo'); })
-      .catch(() => setError('Não foi possível atualizar a base. Exibindo os dados demonstrativos locais.'));
+      .catch(() => setError('Não foi possível atualizar a base. Exibindo os dados demonstrativos locais.'))
+      .finally(() => setLoading(false));
     fetch('/api/agents')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.agents?.some((a: { status: string }) => a.status === 'disponível')) setAiReady(true); })
@@ -59,7 +70,14 @@ export default function Page() {
 
   const isDomain = (DOMAINS as readonly string[]).includes(view);
   const scope = useMemo(() => (isDomain ? rows.filter(i => i.domain === view) : rows), [rows, view, isDomain]);
-  const visible = useMemo(() => scope.filter(i => filter === 'Todos' || statusOf(i) === filter), [scope, filter]);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return scope.filter(i => {
+      if (filter !== 'Todos' && statusOf(i) !== filter) return false;
+      if (!q) return true;
+      return [i.id, i.name, i.owner, i.unitArea, i.domain].join(' ').toLowerCase().includes(q);
+    });
+  }, [scope, filter, query]);
 
   const count = (s: 'Na meta' | 'Atenção' | 'Crítico', at?: 'previous') => scope.filter(i => (at ? statusAt(i, i.previous) : statusOf(i)) === s).length;
   const healthy = count('Na meta'), attention = count('Atenção'), critical = count('Crítico');
@@ -69,6 +87,7 @@ export default function Page() {
     q = questionFromAction(q.trim());
     if (!q || busy) return;
     setChat(true);
+    setChatMin(false);
     setChatError('');
     setMessages(m => [...m, { role: 'user', text: q }]);
     setBusy(true);
@@ -125,7 +144,7 @@ export default function Page() {
         });
       } else {
         const d = await r.json();
-        setAiReady(true);
+        if (!d.simulated) setAiReady(true);
         if (d.conversationId) setConversationId(d.conversationId);
         const id = (d.agent?.id as AgentId) || agentId;
         setAgentId(id);
@@ -143,7 +162,14 @@ export default function Page() {
   function navigate(v: View, f: Filter = 'Todos') {
     setView(v);
     setFilter(f);
+    setQuery('');
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openChat(id: AgentId = 'sinval') {
+    setAgentId(id);
+    setChat(true);
+    setChatMin(false);
   }
 
   function clearChat() {
@@ -156,7 +182,7 @@ export default function Page() {
 
   return (
     <SidebarProvider style={{ '--sidebar-width': '260px' } as React.CSSProperties}>
-      <AppSidebar view={view} rows={rows} onNavigate={navigate} onOpenSinval={() => setChat(true)} />
+      <AppSidebar view={view} rows={rows} onNavigate={navigate} onOpenSinval={() => openChat('sinval')} />
 
       <SidebarInset className="min-w-0">
         {/* Topbar */}
@@ -181,8 +207,8 @@ export default function Page() {
               <Bell size={18} aria-hidden />
               {openCount > 0 && <span className="num absolute -top-0.5 -right-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">{openCount}</span>}
             </button>
-            <button type="button" onClick={() => setChat(true)} className="ink-gradient inline-flex h-9 items-center gap-2 rounded-lg pl-1.5 pr-3 text-[13px] font-semibold text-white shadow-[var(--shadow-1)] transition-opacity hover:opacity-95">
-              <SinvalMark size={24} inverted />
+            <button type="button" onClick={() => openChat('sinval')} className="ink-gradient inline-flex h-9 items-center gap-2 rounded-lg pl-1 pr-3 text-[13px] font-semibold text-white shadow-[var(--shadow-1)] transition-opacity hover:opacity-95">
+              <AgentAvatar id="sinval" size={24} alt="" />
               <span className="hidden sm:inline">Seu Sinval</span>
             </button>
           </div>
@@ -210,7 +236,7 @@ export default function Page() {
             </div>
           )}
 
-          {view === 'Central de alertas' ? (
+          {loading ? <DashboardSkeleton /> : view === 'Central de alertas' ? (
             <>
               <div className="grid gap-4 sm:grid-cols-3">
                 <KpiCard label="Críticos" value={critical} unit={critical ? 'ação imediata' : 'nenhum'} context="Desvio acima de 10 p.p. ou incidente" change={critical - count('Crítico', 'previous')} changeGoodWhen="down" tone="crit" icon={CircleAlert} emphasis={critical > 0} cta={critical ? 'Filtrar críticos' : undefined} onCta={() => setFilter('Crítico')} />
@@ -248,13 +274,10 @@ export default function Page() {
                 </section>
               )}
 
-              {/* Tendência + Seu Sinval */}
-              <div className="grid gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-7 xl:col-span-8"><TrendChart rows={rows} highlight={isDomain ? (view as Domain) : undefined} /></div>
-                <div className="lg:col-span-5 xl:col-span-4"><SinvalCard rows={scope} view={view} mode={aiReady ? 'llm' : mode} onAsk={ask} onOpen={() => setChat(true)} /></div>
-              </div>
+              <TrendChart rows={rows} highlight={isDomain ? (view as Domain) : undefined} />
 
-              {/* Tabela */}
+              {!isDomain && <AgentsGallery available={aiReady || mode === 'demo'} onTalk={openChat} />}
+
               <IndicatorTable
                 rows={visible}
                 scope={scope}
@@ -263,6 +286,8 @@ export default function Page() {
                 onSelect={setSelected}
                 title={isDomain ? `Indicadores de ${view}` : 'Panorama dos indicadores'}
                 description="Resultado, meta, histórico mensal e situação em um só lugar."
+                query={query}
+                onQuery={setQuery}
               />
             </>
           )}
@@ -275,9 +300,12 @@ export default function Page() {
       </SidebarInset>
 
       <IndicatorDetail indicator={selected} onClose={() => setSelected(null)} onAsk={ask} />
-      <SinvalChat
+      <FloatingChat
         open={chat}
-        onOpenChange={setChat}
+        minimized={chatMin}
+        onOpen={() => openChat(agentId)}
+        onClose={() => { setChat(false); setChatMin(false); }}
+        onMinimize={() => setChatMin(true)}
         messages={messages}
         busy={busy}
         statusLine={statusLine}
@@ -290,16 +318,6 @@ export default function Page() {
         onAsk={ask}
         onClear={clearChat}
       />
-
-      {/* Acesso rápido ao assistente no mobile */}
-      <button
-        type="button"
-        onClick={() => setChat(true)}
-        aria-label="Abrir Seu Sinval"
-        className="ink-gradient fixed right-4 bottom-4 z-30 inline-flex h-12 items-center gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-semibold text-white shadow-[var(--shadow-3)] md:hidden"
-      >
-        <SinvalMark size={36} inverted /> <MessageSquareText size={16} aria-hidden /> Seu Sinval
-      </button>
     </SidebarProvider>
   );
 }

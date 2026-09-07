@@ -86,12 +86,12 @@ func Route(selected AgentID, question, page, domain, indicatorID string) AgentID
 func SuggestedActions(id AgentID) []string {
 	switch id {
 	case AgentAurora:
-		return []string{"O que o gap de IA-001 implica para o atendimento?", "Como priorizar os 12 modelos ainda sem avaliação?"}
+		return []string{"Quais riscos de IA estão críticos?", "Como foi calculada a previsão de risco de IA?"}
 	case AgentOctave:
-		return []string{"O que revisar agora em criptografia, acessos privilegiados e incidentes?", "Como tratar os incidentes de exposição de dados do painel?"}
+		return []string{"Quais bases estão mais expostas?", "Há incidentes em aberto?"}
 	case AgentSherlock:
-		return []string{"Quais solicitações de titulares estão fora do prazo?", "Quando um RIPD é necessário neste recorte?"}
+		return []string{"Há solicitações de titulares atrasadas?", "Quais indicadores de LGPD pioraram?"}
 	default:
-		return []string{"Quais indicadores precisam de atenção?", "O que priorizar nesta semana?"}
+		return []string{"Faça um resumo executivo.", "O que exige ação imediata?"}
 	}
 }

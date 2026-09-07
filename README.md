@@ -18,8 +18,9 @@ React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI 
 - `app/globals.css`: design system.
 - `lib/indicators.ts`: regras de negócio dos indicadores.
 - `lib/presentation.ts`: apresentação (rótulos, ordenação, textos, gráfico).
-- `lib/agents.ts`: catálogo dos quatro bots no frontend.
-- `components/governance/`: painel, filtros, tabela, chat, sidebar.
+- `lib/agents.ts`: catálogo dos quatro bots, avatares e sugestões rápidas.
+- `components/governance/`: painel, filtros, tabela, galeria de agentes, chat flutuante, sidebar.
+- `public/images/agents/`: retratos otimizados dos quatro especialistas.
 - `backend/internal/ai/`: cliente OpenAI, roteamento, prompts e serviço.
 - `backend/indicators.json`: 22 indicadores demonstrativos com 18 meses de histórico.
 - `lib/forecast.ts` e `backend/internal/forecast`: suavização de Holt determinística.
@@ -27,12 +28,12 @@ React (Vercel)  --GO_API_URL / GO_API_TOKEN-->  Go  --OPENAI_API_KEY-->  OpenAI 
 
 ## Agentes
 
-| Bot | Papel |
-| --- | --- |
-| Seu Sinval | Coordenador geral |
-| Aurora | Risco de IA |
-| Octave | Proteção de dados |
-| Sherlock | Privacidade de dados |
+| Bot | Papel | Cor |
+| --- | --- | --- |
+| Seu Sinval | Coordenador geral | azul-marinho |
+| Aurora | Risco de IA | violeta |
+| Octave | Proteção de dados | azul |
+| Sherlock | Privacidade de dados | laranja |
 
 ## Variáveis
 
@@ -89,7 +90,10 @@ Tema claro/escuro: botão sol/lua no cabeçalho, persistido por `next-themes` (`
 | Gráfico | Alterna histórico/cenário Holt e mostra/oculta domínios |
 | Detalhe do indicador | Painel **Como esta previsão foi calculada?** com método, confiança e limitações |
 | Tema claro/escuro | Botão sol/lua no cabeçalho; persiste e respeita o SO |
-| Chat | Quatro bots, streaming, histórico da sessão, limpar conversa, falha amigável |
+| Chat flutuante | Um único painel no canto inferior direito; troca de agente; minimizar/fechar |
+| Agentes especialistas | Cards com avatar, especialidade e **Conversar com agente** |
+| Busca da tabela | Filtra por nome, ID ou área; **Limpar filtro** zera busca e situação |
+| Chat | Quatro bots, streaming, histórico da sessão, simulação local identificada se a API falhar |
 
 ## Verificação
 

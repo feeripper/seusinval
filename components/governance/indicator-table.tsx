@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus, SearchX } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus, Search, SearchX } from 'lucide-react';
 import { Indicator } from '@/lib/indicators';
 import { cn } from '@/lib/utils';
 import { DOMAIN_META, Domain, delta, statusOf, targetLabel, unitLabel, valueLabel } from '@/lib/presentation';
@@ -27,6 +27,8 @@ export function IndicatorTable({
   onSelect,
   title,
   description,
+  query,
+  onQuery,
 }: {
   rows: Indicator[];
   scope: Indicator[];
@@ -35,6 +37,8 @@ export function IndicatorTable({
   onSelect: (i: Indicator) => void;
   title: string;
   description: string;
+  query: string;
+  onQuery: (q: string) => void;
 }) {
   const counts: Record<Filter, number> = {
     Todos: scope.length,
@@ -49,7 +53,21 @@ export function IndicatorTable({
         title={<span id="indicators-title">{title}</span>}
         count={rows.length}
         description={description}
-        action={<StatusFilter value={filter} onChange={onFilter} counts={counts} />}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <label className="relative">
+              <span className="sr-only">Buscar indicadores</span>
+              <Search size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-n-400" aria-hidden />
+              <input
+                value={query}
+                onChange={e => onQuery(e.target.value)}
+                placeholder="Buscar por nome, ID ou área"
+                className="h-8 w-44 rounded-md border border-n-200 bg-n-0 pr-2 pl-8 text-xs text-n-800 outline-none placeholder:text-n-400 focus:border-ink-500 focus:ring-2 focus:ring-ink-500/20 sm:w-56"
+              />
+            </label>
+            <StatusFilter value={filter} onChange={onFilter} counts={counts} />
+          </div>
+        }
       />
 
       {rows.length ? (
@@ -129,9 +147,9 @@ export function IndicatorTable({
       ) : (
         <div className="flex flex-col items-center gap-2 border-t border-n-100 px-6 py-12 text-center">
           <span className="inline-flex size-11 items-center justify-center rounded-full bg-n-100 text-n-500"><SearchX size={20} aria-hidden /></span>
-          <p className="text-sm font-semibold text-n-800">Nenhum indicador nesta situação</p>
-          <p className="max-w-xs text-xs text-n-500">Ajuste o filtro para ampliar a visualização.</p>
-          <button type="button" onClick={() => onFilter('Todos')} className="mt-2 rounded-md bg-n-0 px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>
+          <p className="text-sm font-semibold text-n-800">Nenhum indicador encontrado</p>
+          <p className="max-w-xs text-xs text-n-500">Ajuste a busca ou o filtro para ampliar a visualização.</p>
+          <button type="button" onClick={() => { onFilter('Todos'); onQuery(''); }} className="mt-2 rounded-md bg-n-0 px-3 py-1.5 text-xs font-semibold text-n-800 ring-1 ring-n-200 hover:bg-n-50">Limpar filtro</button>
         </div>
       )}
     </Panel>

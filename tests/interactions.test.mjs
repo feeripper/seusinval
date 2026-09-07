@@ -31,18 +31,23 @@ test("page breadcrumb navigates to Governança", async () => {
   assert.match(source, /navigate\('Governança'\)/);
   assert.match(source, /onAgentChange=\{setAgentId\}/);
   assert.match(source, /onClear=\{clearChat\}/);
+  assert.match(source, /FloatingChat/);
+  assert.match(source, /AgentsGallery/);
 });
 
 test("chat lists the four bots and can clear history", async () => {
-  const { AGENTS, DISCLAIMER } = await vite.ssrLoadModule("/lib/agents.ts");
+  const { AGENTS, DISCLAIMER, agentById } = await vite.ssrLoadModule("/lib/agents.ts");
   assert.deepEqual(AGENTS.map(a => a.id), ["sinval", "aurora", "octave", "sherlock"]);
   assert.match(DISCLAIMER, /As respostas são orientativas/);
-  const source = await readFile(path.join(root, "components/governance/sinval-chat.tsx"), "utf8");
+  assert.equal(AGENTS[0].avatar, "/images/agents/seu-sinval.png");
+  assert.match(agentById("sinval").greeting, /Olá! Sou o Seu Sinval/);
+  const source = await readFile(path.join(root, "components/governance/floating-chat.tsx"), "utf8");
   assert.match(source, /Escolher assistente/);
   assert.match(source, /Limpar conversa/);
   assert.match(source, /\{DISCLAIMER\}/);
   assert.match(source, /onAgentChange/);
   assert.match(source, /idx === messages.length - 1/);
+  assert.match(source, /agent\.greeting/);
 });
 
 test("domain cards, KPIs and table rows are actionable", async () => {
@@ -79,6 +84,18 @@ test("frontend chat route never embeds an OpenAI key", async () => {
   assert.doesNotMatch(source, /OPENAI_API_KEY/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_/);
   assert.match(source, /goBase/);
+  assert.match(source, /simulatedReply/);
+});
+
+test("specialist gallery and avatars exist", async () => {
+  const gallery = await readFile(path.join(root, "components/governance/agents-gallery.tsx"), "utf8");
+  assert.match(gallery, /Agentes especialistas/);
+  assert.match(gallery, /Conversar com agente/);
+  const files = ["seu-sinval.png", "aurora.png", "octave.png", "sherlock.png"];
+  for (const file of files) {
+    const buf = await readFile(path.join(root, "public/images/agents", file));
+    assert.ok(buf.length > 1000, file);
+  }
 });
 
 test("forecast explainer and theme toggle exist", async () => {
