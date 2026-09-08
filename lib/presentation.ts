@@ -21,13 +21,19 @@ export const STATUS_META: Record<Status, { tone: Tone; rank: number; hint: strin
 };
 
 export const DOMAIN_SLUGS: Record<Domain, string> = {
-  'Privacidade de dados': 'privacidade-de-dados',
-  'Proteção de dados': 'protecao-de-dados',
-  'Riscos de IA': 'riscos-de-ia',
-  'Governança de dados': 'governanca-de-dados',
+  'Privacidade de dados': 'privacidade',
+  'Proteção de dados': 'protecao',
+  'Riscos de IA': 'ia',
+  'Governança de dados': 'governanca',
 };
 
-export const DOMAIN_BY_SLUG: Record<string, Domain> = Object.fromEntries(Object.entries(DOMAIN_SLUGS).map(([k, v]) => [v, k])) as Record<string, Domain>;
+export const DOMAIN_BY_SLUG: Record<string, Domain> = {
+  ...Object.fromEntries(Object.entries(DOMAIN_SLUGS).map(([k, v]) => [v, k])) as Record<string, Domain>,
+  'privacidade-de-dados': 'Privacidade de dados',
+  'protecao-de-dados': 'Proteção de dados',
+  'riscos-de-ia': 'Riscos de IA',
+  'governanca-de-dados': 'Governança de dados',
+};
 
 export const STATUS_SLUGS: Record<Status, string> = {
   'Na meta': 'ok',

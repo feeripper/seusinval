@@ -5,9 +5,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Seu Sinval | Governança de dados e IA",
   description: "Painel corporativo de privacidade, proteção de dados, governança e riscos de IA.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

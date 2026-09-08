@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "db/**", "worker/**", "backend/**", "tests/**", "**/*.test.mjs", "scripts/**", "vite.config.ts", "examples/**", "dist/**", ".next/**"]
+  "exclude": ["node_modules", "backend/**", "tests/**", "**/*.test.mjs", "dist/**", ".next/**"]
 }

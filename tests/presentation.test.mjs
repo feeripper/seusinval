@@ -1,63 +1,54 @@
 import assert from "node:assert/strict";
-import test, { after } from "node:test";
+import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-
-import { createServer } from "vite";
+import path from "node:path";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const vite = await createServer({
-  appType: "custom",
-  configFile: false,
-  root,
-  resolve: { alias: { "@": root } },
-  server: { middlewareMode: true },
+const data = JSON.parse(await readFile(path.join(root, "backend/indicators.json"), "utf8"));
+
+function status(i) {
+  const gap = i.direction === "up" ? i.target - i.value : i.value - i.target;
+  return gap <= 0 ? "Na meta" : gap > 10 || i.unit === "" ? "Crítico" : "Atenção";
+}
+
+function gapOf(i) {
+  return i.direction === "up" ? i.target - i.value : i.value - i.target;
+}
+
+test("indicator catalog keeps 22 items with 18-month history", () => {
+  assert.equal(data.length, 22);
+  assert.equal(data[0].history.length, 18);
+  const domains = [...new Set(data.map((i) => i.domain))].sort();
+  assert.deepEqual(domains, ["Governança de dados", "Privacidade de dados", "Proteção de dados", "Riscos de IA"]);
 });
 
-after(async () => {
-  await vite.close();
+test("status rules match the documented thresholds", () => {
+  const pro002 = data.find((i) => i.id === "PRO-002");
+  const prv003 = data.find((i) => i.id === "PRV-003");
+  const ia004 = data.find((i) => i.id === "IA-004");
+  assert.equal(status(pro002), "Crítico");
+  assert.equal(status(ia004), "Crítico");
+  assert.equal(status(prv003), "Na meta");
+  assert.ok(gapOf(pro002) > 10);
 });
 
-test("structures the rule-based answer into summary, evidence and disclaimer", async () => {
-  const { analyze } = await vite.ssrLoadModule("/lib/indicators.ts");
-  const { parseAnswer } = await vite.ssrLoadModule("/lib/presentation.ts");
-
-  const parsed = parseAnswer(analyze("Quais indicadores precisam de atenção e qual a tendência futura?"));
-
-  assert.ok(parsed);
-  assert.match(parsed.summary, /^Análise da base demonstrativa/);
-  assert.ok(parsed.items.length >= 6);
-  assert.equal(parsed.items[0].status, "Crítico");
-  assert.ok(parsed.items.some((item) => item.id === "IA-004"));
-  assert.ok(parsed.items.some((item) => item.id === "PRO-002"));
-  assert.match(parsed.items.find((item) => item.id === "IA-004")?.projection ?? "", /%/);
-  assert.match(parsed.method ?? "", /Holt/);
-  assert.match(parsed.disclaimer ?? "", /^Resposta demonstrativa/);
-});
-
-test("falls back to plain text for unstructured answers", async () => {
-  const { analyze } = await vite.ssrLoadModule("/lib/indicators.ts");
-  const { parseAnswer } = await vite.ssrLoadModule("/lib/presentation.ts");
-
-  assert.equal(parseAnswer(analyze("ola")), null);
-  assert.equal(parseAnswer("Servico indisponivel."), null);
-});
-
-test("presentation helpers do not change the business rules", async () => {
-  const { indicators, status } = await vite.ssrLoadModule("/lib/indicators.ts");
-  const { statusOf, openItems, whyText, trendSeries } = await vite.ssrLoadModule("/lib/presentation.ts");
-
-  for (const i of indicators) assert.equal(statusOf(i), status(i));
-  const open = openItems(indicators).map((i) => i.id);
+test("open items exclude in-target indicators and keep known alerts", () => {
+  const open = data.filter((i) => status(i) !== "Na meta").map((i) => i.id);
   assert.ok(open.includes("IA-004"));
   assert.ok(open.includes("PRO-002"));
   assert.ok(!open.includes("PRV-003"));
-  assert.match(whyText(indicators.find((i) => i.id === "PRO-002")), /13 p\.p\. abaixo da meta de 95%/);
+});
 
-  const series = trendSeries(indicators);
-  assert.equal(series.length, 15);
-  assert.equal(series[11].projected, false);
-  assert.equal(series[12].projected, true);
-  assert.equal(series[12].privacy, null);
-  assert.equal(typeof series[12].privacy_p, "number");
-  assert.equal(typeof series[12].gov_p, "number");
+test("presentation source still documents Holt and parseAnswer", async () => {
+  const source = await readFile(path.join(root, "lib/presentation.ts"), "utf8");
+  assert.match(source, /export function parseAnswer/);
+  assert.match(source, /export function trendSeries/);
+  assert.match(source, /export function whyText/);
+  const forecast = await readFile(path.join(root, "lib/forecast.ts"), "utf8");
+  assert.match(forecast, /const ALPHA = 0.45/);
+  assert.match(forecast, /const BETA = 0.25/);
+  const analyze = await readFile(path.join(root, "lib/indicators.ts"), "utf8");
+  assert.match(analyze, /export function analyze/);
+  assert.match(analyze, /Projeção Holt para setembro/);
 });

@@ -33,6 +33,7 @@ Se o usuário escolhe um especialista, a seleção é respeitada. Com Seu Sinval
 | `PORT` | não | Porta HTTP, padrão `8080` |
 | `OPENAI_API_KEY` | para o chat | Chave da OpenAI. Nunca exponha no frontend. |
 | `OPENAI_MODEL` | não | Modelo da Chat Completions API. Padrão `gpt-4o-mini`. |
+| `PORTAL_URL` | não | Base dos links de e-mail das assinaturas. Padrão vazio. |
 
 A chave **não** deve existir em `VITE_`, `NEXT_PUBLIC_` ou no código do React. O frontend na Vercel só conhece `GO_API_URL` e `GO_API_TOKEN`.
 
@@ -62,6 +63,7 @@ Injete as variáveis no container pelo gerenciador de segredos. Porta padrão: 8
 - `GET /api/indicators`: indicadores. Header `Authorization: Bearer <API_TOKEN>`.
 - `GET /api/agents`: catálogo dos quatro bots e status.
 - `POST /api/chat`: chat. Aceita `message` ou `question`. Com `Accept: text/event-stream` ou `"stream": true`, responde em SSE (`meta`, `delta`, `done`, `error`).
+- `GET/POST /api/subscriptions`, `GET/PATCH/DELETE /api/subscriptions/{id}`, `POST /api/subscriptions/{id}/pause|resume`, `GET /api/subscriptions/history`, `POST /api/notifications/simulate`, `POST /api/subscriptions/unsubscribe`.
 
 Payload:
 

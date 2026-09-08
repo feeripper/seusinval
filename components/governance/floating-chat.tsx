@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { PERIOD } from '@/lib/presentation';
 import { AGENTS, AgentId, DISCLAIMER, agentById, questionsFor } from '@/lib/agents';
 import { AgentAvatar, AvailabilityDot } from './agent-avatar';
-import type { Message } from './sinval-chat';
+
+export type Message = { role: 'user' | 'assistant'; text: string; agentId?: AgentId; actions?: string[]; streaming?: boolean };
 
 export function FloatingChat({
   open,

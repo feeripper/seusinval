@@ -14,13 +14,12 @@ import { AlertList } from '@/components/governance/alert-list';
 import { AppSidebar, View } from '@/components/governance/app-sidebar';
 import { DashboardSkeleton } from '@/components/governance/dashboard-skeleton';
 import { DomainCards } from '@/components/governance/domain-cards';
-import { FloatingChat } from '@/components/governance/floating-chat';
 import { IndicatorDetail } from '@/components/governance/indicator-detail';
 import { IndicatorTable } from '@/components/governance/indicator-table';
 import { KpiCard } from '@/components/governance/kpi-card';
 import { Priorities } from '@/components/governance/priorities';
 import { SubscriptionsPanel } from '@/components/governance/subscriptions-panel';
-import { Message } from '@/components/governance/sinval-chat';
+import { FloatingChat, Message } from '@/components/governance/floating-chat';
 import { Filter } from '@/components/governance/status-filter';
 import { ThemeToggle } from '@/components/theme-toggle';
 

@@ -1,22 +1,9 @@
 import assert from "node:assert/strict";
-import test, { after } from "node:test";
+import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { createServer } from "vite";
-
 const root = fileURLToPath(new URL("..", import.meta.url));
-const vite = await createServer({
-  appType: "custom",
-  configFile: false,
-  root,
-  resolve: { alias: { "@": root } },
-  server: { middlewareMode: true },
-});
-
-after(async () => {
-  await vite.close();
-});
 
 test("sidebar exposes a working Governança control", async () => {
   const source = await readFile(path.join(root, "components/governance/app-sidebar.tsx"), "utf8");
@@ -36,7 +23,7 @@ test("page breadcrumb navigates to Governança", async () => {
 });
 
 test("chat lists the four bots and can clear history", async () => {
-  const { AGENTS, DISCLAIMER, agentById } = await vite.ssrLoadModule("/lib/agents.ts");
+  const { AGENTS, DISCLAIMER, agentById } = await import("../lib/agents.ts");
   assert.deepEqual(AGENTS.map(a => a.id), ["sinval", "aurora", "octave", "sherlock"]);
   assert.match(DISCLAIMER, /As respostas são orientativas/);
   assert.equal(AGENTS[0].avatar, "/images/agents/seu-sinval.png");
@@ -58,7 +45,7 @@ test("domain cards, KPIs and table rows are actionable", async () => {
   assert.match(kpi, /cta && onCta && 'surface-hover'/);
   const page = await readFile(path.join(root, "app/page.tsx"), "utf8");
   assert.match(page, /onOpen=\{d => navigate\(d\)\}/);
-  assert.match(page, /navigate\('Central de alertas', 'Crítico'\)/);
+  assert.match(page, /navigate\('Central de alertas', \{ filter: 'Crítico', domain: activeDomain \}\)/);
   const table = await readFile(path.join(root, "components/governance/indicator-table.tsx"), "utf8");
   assert.match(table, /onClick=\{\(\) => onSelect\(i\)\}/);
 });
@@ -116,5 +103,5 @@ test("status filter and clear-filter controls exist", async () => {
   assert.match(table, /Limpar filtro/);
   assert.match(table, /onFilter/);
   const alerts = await readFile(path.join(root, "components/governance/alert-list.tsx"), "utf8");
-  assert.match(alerts, /Limpar filtro/);
+  assert.match(alerts, /Limpar filtros/);
 });
